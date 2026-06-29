@@ -37,9 +37,9 @@
 
 .title {
   margin: 22px 0 0;
-  font-size: clamp(32px, 5vw, 46px);
+  font-size: clamp(28px, 4.5vw, 42px);
   font-weight: 800;
-  line-height: 1.08;
+  line-height: 1.25;
   letter-spacing: -0.01em;
 }
 

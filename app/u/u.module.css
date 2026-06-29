@@ -165,6 +165,33 @@
   border-color: var(--accent);
 }
 
+.select {
+  height: 50px;
+  border-radius: var(--radius);
+  padding: 0 16px;
+  font-size: 16px;
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239a97ad' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 40px;
+  cursor: pointer;
+  transition: border-color 0.18s ease;
+}
+
+.select:focus {
+  border-color: var(--accent);
+}
+
+.customInput {
+  margin-top: 10px;
+}
+
 /* Send */
 .send {
   margin-top: 22px;

@@ -15,7 +15,7 @@ const MAX_BYTES = 15 * 1024 * 1024;
 export async function GET(req: NextRequest) {
   const sinceParam = Number(req.nextUrl.searchParams.get("since") ?? "0");
   const since = Number.isFinite(sinceParam) ? sinceParam : 0;
-  const photos = await listPhotos(since);
+  const photos = listPhotos(since);
   return NextResponse.json(
     { photos, latestSeq: latestSeq(), queue: getQueueDepth() },
     { headers: { "Cache-Control": "no-store" } }
