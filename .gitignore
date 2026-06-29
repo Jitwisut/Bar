@@ -1,0 +1,12 @@
+/node_modules
+/.next
+/data
+/out
+/build
+next-env.d.ts
+.DS_Store
+*.pem
+.env*
+!.env.example
+.claude
+/claude

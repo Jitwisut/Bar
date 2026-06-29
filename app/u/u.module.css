@@ -1,0 +1,281 @@
+.screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 20px 20px 28px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.brandDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-2);
+}
+
+.title {
+  margin: 18px 0 0;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.sub {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Preview hero — tap to pick */
+.preview {
+  margin-top: 20px;
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.18s ease;
+}
+
+.preview:hover {
+  border-color: var(--accent);
+}
+
+.preview img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.previewEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.previewEmpty svg {
+  width: 46px;
+  height: 46px;
+}
+
+.previewEmpty span {
+  font-size: 14px;
+}
+
+.pvtag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  z-index: 2;
+}
+
+/* Source buttons */
+.sources {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.srcBtn {
+  height: 52px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.srcBtn:hover {
+  border-color: var(--accent);
+}
+
+.srcBtn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Fields */
+.field {
+  margin-top: 16px;
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+
+.input {
+  height: 50px;
+  border-radius: var(--radius);
+  padding: 0 16px;
+  font-size: 16px;
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  outline: none;
+  transition: border-color 0.18s ease;
+}
+
+.input::placeholder {
+  color: var(--muted);
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+/* Send */
+.send {
+  margin-top: 22px;
+  height: 56px;
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 700;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  transition: background 0.18s ease;
+}
+
+.send:hover:not(:disabled) {
+  background: var(--accent-press);
+}
+
+.send:disabled {
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.note {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
+  min-height: 18px;
+  color: var(--accent-2);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hidden {
+  display: none;
+}
+
+/* Success state */
+.success {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  padding: 32px 28px;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+.checkCircle {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: popIn 0.35s ease both;
+}
+
+.checkCircle svg {
+  width: 38px;
+  height: 38px;
+  color: #fff;
+}
+
+.successH {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.successSub {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 30ch;
+}
+
+.again {
+  margin-top: 10px;
+  height: 52px;
+  padding: 0 28px;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  transition: border-color 0.18s ease;
+}
+
+.again:hover {
+  border-color: var(--accent);
+}
