@@ -11,11 +11,15 @@ import styles from "./tv.module.css";
 
 const DELETE_AFTER_DISPLAY_SEC = 5 * 60;
 
-function markDisplayed(id: string, deleteAfterSec?: number) {
+function markDisplayed(
+  id: string,
+  deleteAfterSec?: number,
+  mode: "started" | "finished" = "finished"
+) {
   fetch("/api/photos/displayed", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, deleteAfterSec }),
+    body: JSON.stringify({ id, deleteAfterSec, mode }),
   }).catch(() => {});
 }
 
@@ -64,7 +68,11 @@ export default function TvWall() {
     setCurrentId(next);
     setStartedAt(Date.now());
     setQueue(rest);
-    markDisplayed(next, Math.ceil(SHOW_MS / 1000) + DELETE_AFTER_DISPLAY_SEC);
+    markDisplayed(
+      next,
+      Math.ceil(SHOW_MS / 1000) + DELETE_AFTER_DISPLAY_SEC,
+      "started"
+    );
   }, [currentId, queue, SHOW_MS]);
 
   // 3. Auto-advance: hide after the *remaining* time → triggers next dequeue
@@ -73,7 +81,7 @@ export default function TvWall() {
     const id = currentId;
     const remaining = Math.max(0, SHOW_MS - (Date.now() - startedAt));
     const t = setTimeout(() => {
-      markDisplayed(id);
+      markDisplayed(id, DELETE_AFTER_DISPLAY_SEC, "finished");
       setCurrentId(null);
       setStartedAt(null);
     }, remaining);

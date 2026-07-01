@@ -9,10 +9,15 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as {
     id?: string;
     deleteAfterSec?: number;
+    mode?: "started" | "finished";
   };
   const id = String(body.id ?? "");
   if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
 
-  const ok = await markPhotoDisplayed(id, body.deleteAfterSec);
+  const ok = await markPhotoDisplayed(
+    id,
+    body.deleteAfterSec,
+    body.mode !== "started"
+  );
   return NextResponse.json({ ok });
 }

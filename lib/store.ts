@@ -247,24 +247,29 @@ function clampDeleteAfterSec(value: unknown) {
   return Math.min(24 * 60 * 60, Math.max(30, Math.round(n)));
 }
 
-/** Mark a shown photo as done; it will be deleted after the requested delay. */
+/** Schedule a shown photo for deletion; optionally remove it from the approved feed. */
 export async function markPhotoDisplayed(
   id: string,
-  deleteAfterSec: unknown = DISPLAY_DELETE_SEC
+  deleteAfterSec: unknown = DISPLAY_DELETE_SEC,
+  removeFromFeed = true
 ): Promise<boolean> {
   const ttl = clampDeleteAfterSec(deleteAfterSec);
 
   if (hasRedis()) {
-    const removed = await redisCommand<number>(["ZREM", approvedKey, id]);
+    const exists = await redisCommand<number>(["EXISTS", metaKey(id)]);
     await Promise.all([
+      removeFromFeed
+        ? redisCommand(["ZREM", approvedKey, id])
+        : Promise.resolve(null),
       redisCommand(["EXPIRE", metaKey(id), ttl]),
       redisCommand(["EXPIRE", imageKey(id), ttl]),
     ]);
-    return (removed ?? 0) > 0;
+    return (exists ?? 0) > 0;
   }
 
   const s = getState();
   if (!s.photos.some((p) => p.id === id)) return false;
+  if (!removeFromFeed) return true;
   setTimeout(() => {
     const idx = s.photos.findIndex((p) => p.id === id);
     if (idx !== -1) s.photos.splice(idx, 1);

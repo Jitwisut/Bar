@@ -11,11 +11,15 @@ import styles from "./slideshow.module.css";
 
 const DELETE_AFTER_DISPLAY_SEC = 5 * 60;
 
-function markDisplayed(id: string, deleteAfterSec?: number) {
+function markDisplayed(
+  id: string,
+  deleteAfterSec?: number,
+  mode: "started" | "finished" = "finished"
+) {
   fetch("/api/photos/displayed", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, deleteAfterSec }),
+    body: JSON.stringify({ id, deleteAfterSec, mode }),
   }).catch(() => {});
 }
 
@@ -61,7 +65,11 @@ export default function Slideshow() {
     const [next, ...rest] = queue;
     setCurrentId(next);
     setQueue(rest);
-    markDisplayed(next, Math.ceil(SHOW_MS / 1000) + DELETE_AFTER_DISPLAY_SEC);
+    markDisplayed(
+      next,
+      Math.ceil(SHOW_MS / 1000) + DELETE_AFTER_DISPLAY_SEC,
+      "started"
+    );
   }, [currentId, queue, SHOW_MS]);
 
   // ── 3. Auto-advance: hide after SHOW_MS → triggers dequeue effect ────────
@@ -69,7 +77,7 @@ export default function Slideshow() {
     if (!currentId) return;
     const id = currentId;
     const t = setTimeout(() => {
-      markDisplayed(id);
+      markDisplayed(id, DELETE_AFTER_DISPLAY_SEC, "finished");
       setCurrentId(null);
     }, SHOW_MS);
     return () => clearTimeout(t);
