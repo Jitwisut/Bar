@@ -163,6 +163,7 @@
   color: var(--muted);
   border: none;
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
 }
 
 .tab:hover {
@@ -509,8 +510,107 @@
   border-color: var(--accent);
 }
 
-@media (max-width: 560px) {
+/* ── Mobile (≤640px) ───────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .shell {
+    /* leave room for the sticky save bar so the last field isn't hidden */
+    padding: 18px 14px 96px;
+  }
+
+  .head {
+    margin-bottom: 18px;
+  }
+
+  .logo {
+    font-size: 18px;
+  }
+
+  .logoSub {
+    font-size: 12px;
+  }
+
+  /* Tabs become one horizontally-scrollable strip instead of ragged rows */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 2px;
+    margin: 0 -14px 18px;
+    padding: 0 14px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    height: 46px;
+    padding: 0 14px;
+    font-size: 13px;
+    scroll-snap-align: start;
+  }
+
+  .quickLinks {
+    gap: 8px;
+  }
+
+  .quickLink {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+  }
+
+  .card {
+    padding: 18px 16px;
+  }
+
   .row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  /* Bigger touch targets for form controls */
+  .input,
+  .select {
+    height: 52px;
+    font-size: 16px; /* ≥16px stops iOS from zooming on focus */
+  }
+
+  .capList {
+    max-height: none; /* let the page scroll instead of a nested scroller */
+  }
+
+  /* Sticky save bar: full-width button, message above it */
+  .saveBar {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .saveMsg {
+    margin-right: 0;
+    width: 100%;
+    text-align: center;
+  }
+
+  .saveBtn {
+    width: 100%;
+    height: 50px;
+  }
+
+  /* Pending queue: 2 across on phones */
+  .pendGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+}
+
+/* Very narrow phones (≤380px): pending back to single column */
+@media (max-width: 380px) {
+  .pendGrid {
     grid-template-columns: 1fr;
   }
 }

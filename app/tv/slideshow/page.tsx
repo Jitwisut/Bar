@@ -6,6 +6,7 @@ import { useUploadQr } from "@/lib/useUploadQr";
 import { usePhotos } from "@/lib/usePhotos";
 import { useSettings } from "@/lib/useSettings";
 import { ArrowLeftIcon, InstagramIcon } from "@/components/icons";
+import { CountdownBar } from "@/components/CountdownBar";
 import type { Photo } from "@/lib/client";
 import styles from "./slideshow.module.css";
 
@@ -60,14 +61,12 @@ export default function Slideshow() {
 
       {current ? (
         <>
-          {/* countdown bar — key forces restart on each new photo */}
-          <div
+          {/* countdown bar — matches the photo's display window, resumes on refresh */}
+          <CountdownBar
             key={current.id}
+            durationMs={SHOW_MS}
+            elapsedMs={elapsed}
             className={styles.countdown}
-            style={{
-              animationDuration: `${SHOW_MS}ms`,
-              animationDelay: `-${elapsed}ms`,
-            }}
           />
 
           <div className={styles.frame}>

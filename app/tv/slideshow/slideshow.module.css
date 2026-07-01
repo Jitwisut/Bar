@@ -7,7 +7,7 @@
   font-family: var(--font-display);
 }
 
-/* 60s countdown bar — key prop on element forces restart each photo */
+/* countdown bar — duration set inline per photo; value here is a fallback */
 .countdown {
   position: absolute;
   top: 0;
@@ -16,7 +16,7 @@
   width: 100%;
   background: var(--accent);
   transform-origin: left;
-  animation: shrink 60s linear forwards;
+  animation: shrink var(--tv-show-ms, 60s) linear forwards;
   z-index: 6;
 }
 

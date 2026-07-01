@@ -76,7 +76,8 @@
   background: var(--accent);
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
   transform-origin: left;
-  animation: countdownShrink 40s linear forwards;
+  /* duration is set inline per-photo (server display window); this is a fallback */
+  animation: countdownShrink var(--tv-show-ms, 40s) linear forwards;
   z-index: 5;
 }
 

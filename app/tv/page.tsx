@@ -7,6 +7,7 @@ import { usePhotos } from "@/lib/usePhotos";
 import { useSettings } from "@/lib/useSettings";
 import type { Photo } from "@/lib/client";
 import { BoltIcon, InstagramIcon, SlideshowIcon } from "@/components/icons";
+import { CountdownBar } from "@/components/CountdownBar";
 import styles from "./tv.module.css";
 
 const DELETE_AFTER_DISPLAY_SEC = 5 * 60;
@@ -66,14 +67,12 @@ export default function TvWall() {
       <div className={styles.photoHalf}>
         {featured ? (
           <div className={styles.photoSquare}>
-            {/* countdown bar — resumes at the elapsed position after refresh */}
-            <div
+            {/* countdown bar — matches the photo's display window, resumes on refresh */}
+            <CountdownBar
               key={`bar-${featured.id}`}
+              durationMs={SHOW_MS}
+              elapsedMs={elapsed}
               className={styles.countdown}
-              style={{
-                animationDuration: `${SHOW_MS}ms`,
-                animationDelay: `-${elapsed}ms`,
-              }}
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
