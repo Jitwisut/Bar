@@ -4,15 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { makeQrDataUrl, uploadUrl } from "@/lib/client";
 import { usePhotos } from "@/lib/usePhotos";
+import { useSettings } from "@/lib/useSettings";
 import type { Photo } from "@/lib/client";
 import { BoltIcon, InstagramIcon, SlideshowIcon } from "@/components/icons";
 import styles from "./tv.module.css";
 
-const SHOW_MS = 40000; // how long a photo stays on the featured screen
 const STORE_KEY = "tv_featured_v1"; // persists { id, at } across refresh
 
 export default function TvWall() {
   const { photos, status } = usePhotos();
+  const { settings } = useSettings();
+  const SHOW_MS = settings.tvDurationSec * 1000;
   const [qr, setQr] = useState("");
 
   // Display queue (same model as the slideshow)
@@ -118,7 +120,10 @@ export default function TvWall() {
             <div
               key={`bar-${featured.id}`}
               className={styles.countdown}
-              style={{ animationDelay: `-${elapsed}ms` }}
+              style={{
+                animationDuration: `${SHOW_MS}ms`,
+                animationDelay: `-${elapsed}ms`,
+              }}
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -148,8 +153,8 @@ export default function TvWall() {
           <div className={styles.photoSquare}>
             <div className={styles.featuredEmpty}>
               <BoltIcon className={styles.emptyBolt} />
-              <div className={styles.emptyTitle}>รอรูปขึ้นจอ</div>
-              <div className={styles.emptySub}>สแกน QR เพื่อส่งรูป</div>
+              <div className={styles.emptyTitle}>{settings.idleTitle}</div>
+              <div className={styles.emptySub}>{settings.idleSub}</div>
             </div>
           </div>
         )}
@@ -160,7 +165,7 @@ export default function TvWall() {
         <header className={styles.statusBar}>
           <div className={styles.brand}>
             <BoltIcon className={styles.brandBolt} />
-            <h1 className={styles.brandName}>ELECTRIC SOCIAL</h1>
+            <h1 className={styles.brandName}>{settings.brandName}</h1>
           </div>
           <div className={styles.liveTag}>
             <span className={`${styles.liveDot} ${live ? "" : styles.off}`} />
@@ -202,8 +207,8 @@ export default function TvWall() {
             <span className={styles.qrScan} aria-hidden />
           </div>
           <div className={styles.warpText}>
-            <div className={styles.warpTitle}>OPEN A WARP</div>
-            <div className={styles.warpSub}>สแกนเพื่อส่งรูปขึ้นจอ</div>
+            <div className={styles.warpTitle}>{settings.qrHeading}</div>
+            <div className={styles.warpSub}>{settings.qrSub}</div>
             <div className={styles.warpStats}>
               <span className={styles.statValueCyan}>{photos.length}</span>
               <span className={styles.statLabel}>รูปทั้งหมด</span>

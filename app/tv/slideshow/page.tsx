@@ -4,15 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useUploadQr } from "@/lib/useUploadQr";
 import { usePhotos } from "@/lib/usePhotos";
+import { useSettings } from "@/lib/useSettings";
 import { ArrowLeftIcon, InstagramIcon } from "@/components/icons";
 import type { Photo } from "@/lib/client";
 import styles from "./slideshow.module.css";
 
-const SHOW_MS = 60000;
-
 export default function Slideshow() {
   const { photos } = usePhotos();
   const { src: qr } = useUploadQr();
+  const { settings } = useSettings();
+  const SHOW_MS = settings.slideshowDurationSec * 1000;
 
   // photo id currently on screen (null = idle)
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -63,7 +64,11 @@ export default function Slideshow() {
       {current ? (
         <>
           {/* countdown bar — key forces restart on each new photo */}
-          <div key={current.id} className={styles.countdown} />
+          <div
+            key={current.id}
+            className={styles.countdown}
+            style={{ animationDuration: `${SHOW_MS}ms` }}
+          />
 
           <div className={styles.frame}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -71,7 +76,7 @@ export default function Slideshow() {
           </div>
 
           <div className={styles.top}>
-            <div className={`${styles.logo} accA`}>NEON BAR</div>
+            <div className={`${styles.logo} accA`}>{settings.brandName}</div>
             <div className={styles.live}>
               <span className={styles.dot} />
               ล่าสุด · ส่งรูปขึ้นจอ
@@ -108,15 +113,15 @@ export default function Slideshow() {
         </>
       ) : (
         <div className={styles.empty}>
-          <div className={`${styles.emptyBrand} accA`}>NEON BAR</div>
+          <div className={`${styles.emptyBrand} accA`}>{settings.brandName}</div>
           {qr && (
             <div className={styles.emptyPlate}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qr} alt="QR ส่งรูป" />
             </div>
           )}
-          <div className={styles.emptyH}>สแกนเพื่อส่งรูปขึ้นจอ</div>
-          <div className={styles.emptySub}>ถ่ายหรือเลือกรูป แล้วขึ้นจอนี้ทันที</div>
+          <div className={styles.emptyH}>{settings.qrSub}</div>
+          <div className={styles.emptySub}>{settings.idleSub}</div>
         </div>
       )}
     </div>

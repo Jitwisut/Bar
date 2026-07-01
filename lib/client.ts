@@ -10,6 +10,7 @@ export type Photo = {
   ext: string;
   ts: number;
   tint: string;
+  status?: "approved" | "pending";
 };
 
 /** The base URL a phone should open to upload. Auto-adapts to the LAN host the

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSettings } from "@/lib/useSettings";
 import {
   MonitorIcon,
   CameraIcon,
@@ -11,12 +12,15 @@ import {
 import styles from "./page.module.css";
 
 export default function Home() {
+  const { settings } = useSettings();
+  const brandName = settings.brandName || "NEON BAR";
+
   return (
     <div className={styles.page}>
       {/* Top nav */}
       <header className={styles.nav}>
         <div className={styles.navInner}>
-          <div className={styles.logo}>Electric Social</div>
+          <div className={styles.logo}>{brandName}</div>
         </div>
       </header>
 
@@ -31,8 +35,7 @@ export default function Home() {
             <span className={styles.titleAccent}>แบบเรียลไทม์</span>
           </h1>
           <p className={styles.subtitle}>
-            ระบบแสดงรูปบนจอสำหรับร้านอาหาร บาร์ และงานอีเวนต์ —
-            ให้ลูกค้าแชร์บรรยากาศขึ้นจอได้ทันที ร้านของคุณก็มีชีวิตชีวาด้วยรูปจากทุกคน
+            {settings.tagline}
           </p>
         </section>
 
@@ -86,14 +89,14 @@ export default function Home() {
 
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
-          <div className={styles.footerBrand}>Electric Social</div>
+          <div className={styles.footerBrand}>{brandName}</div>
           <div className={styles.footerLinks}>
             <a href="#">เงื่อนไข</a>
             <a href="#">ความเป็นส่วนตัว</a>
             <a href="#">ติดต่อ</a>
             <a href="#">ร้านค้า</a>
           </div>
-          <div className={styles.footerCopy}>© 2026 Electric Social</div>
+          <div className={styles.footerCopy}>© 2026 {brandName}</div>
         </div>
       </footer>
     </div>

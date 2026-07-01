@@ -419,3 +419,55 @@
 .again:hover {
   border-color: var(--accent);
 }
+
+/* ── Payment screen ────────────────────────────────────────────────────── */
+.payBox {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 26px 20px;
+  border: 2px solid var(--border-strong);
+  box-shadow: var(--glow-cyan);
+  background: var(--surface);
+}
+
+.payAmount {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 44px;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: 0 0 14px var(--accent);
+}
+
+.payQrPlate {
+  background: #000;
+  border: 4px solid var(--accent-2);
+  box-shadow: var(--glow-magenta);
+  padding: 10px;
+  line-height: 0;
+}
+
+.payQrPlate img {
+  width: clamp(200px, 62vw, 260px);
+  height: clamp(200px, 62vw, 260px);
+  display: block;
+}
+
+.payNoQr {
+  font-size: 14px;
+  color: var(--accent-2);
+  text-align: center;
+  max-width: 24ch;
+  line-height: 1.5;
+}
+
+.payHint {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}

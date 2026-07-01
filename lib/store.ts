@@ -1,5 +1,7 @@
 import crypto from "crypto";
 
+export type PhotoStatus = "approved" | "pending";
+
 export type Photo = {
   id: string;
   seq: number;
@@ -8,6 +10,7 @@ export type Photo = {
   ext: string;
   ts: number;
   tint: string;
+  status: PhotoStatus;
 };
 
 const TINTS = [
@@ -49,9 +52,20 @@ export function getQueueDepth(): number {
   return getState().queue.pending;
 }
 
+/** Photos shown on the TV — only approved ones. */
 export function listPhotos(sinceSeq = 0): Photo[] {
   const s = getState();
-  return sinceSeq > 0 ? s.photos.filter((p) => p.seq > sinceSeq) : s.photos;
+  const approved = s.photos.filter((p) => p.status === "approved");
+  return sinceSeq > 0 ? approved.filter((p) => p.seq > sinceSeq) : approved;
+}
+
+/** Pending photos awaiting staff approval (admin only), newest first. */
+export function listPending(): Photo[] {
+  return getState().photos.filter((p) => p.status === "pending").reverse();
+}
+
+export function pendingCount(): number {
+  return getState().photos.filter((p) => p.status === "pending").length;
 }
 
 export function latestSeq(): number {
@@ -63,6 +77,9 @@ export async function addPhoto(input: {
   ext: string;
   name: string;
   msg: string;
+  status?: PhotoStatus;
+  nameMaxLen?: number;
+  msgMaxLen?: number;
 }): Promise<{ photo: Photo; queuedAhead: number }> {
   const s = getState();
 
@@ -73,10 +90,11 @@ export async function addPhoto(input: {
     const photo: Photo = {
       id, ext,
       seq: ++s.seq,
-      name: (input.name || "").trim().slice(0, 40) || "ไม่ระบุชื่อ",
-      msg: (input.msg || "").trim().slice(0, 120),
+      name: (input.name || "").trim().slice(0, input.nameMaxLen ?? 40) || "ไม่ระบุชื่อ",
+      msg: (input.msg || "").trim().slice(0, input.msgMaxLen ?? 120),
       ts: Date.now(),
       tint: TINTS[s.photos.length % TINTS.length],
+      status: input.status ?? "approved",
     };
 
     s.buffers.set(id, { buf: input.buffer, ext });
@@ -90,6 +108,31 @@ export async function addPhoto(input: {
 
 export function getImageBuffer(id: string): { buf: Buffer; ext: string } | null {
   return getState().buffers.get(id) ?? null;
+}
+
+/** Approve a pending photo → give it a fresh seq so pollers pick it up as new. */
+export async function approvePhoto(id: string): Promise<boolean> {
+  const s = getState();
+  return s.queue.add(async () => {
+    const p = s.photos.find((x) => x.id === id && x.status === "pending");
+    if (!p) return false;
+    p.status = "approved";
+    p.seq = ++s.seq;
+    p.ts = Date.now();
+    return true;
+  }).done;
+}
+
+/** Reject/delete a photo (used for pending rejection). */
+export async function rejectPhoto(id: string): Promise<boolean> {
+  const s = getState();
+  return s.queue.add(async () => {
+    const idx = s.photos.findIndex((x) => x.id === id);
+    if (idx === -1) return false;
+    s.photos.splice(idx, 1);
+    s.buffers.delete(id);
+    return true;
+  }).done;
 }
 
 export async function clearPhotos(): Promise<void> {

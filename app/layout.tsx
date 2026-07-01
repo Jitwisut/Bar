@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
+import { getPublicSettings } from "@/lib/settings";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -14,10 +15,13 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
 });
 
-export const metadata: Metadata = {
-  title: "Neon Bar · ส่งรูปขึ้นจอ",
-  description: "สแกน QR ส่งรูปขึ้นจอทีวีที่ร้านแบบเรียลไทม์",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicSettings();
+  return {
+    title: `${settings.brandName} · ส่งรูปขึ้นจอ`,
+    description: settings.tagline,
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#130d22",

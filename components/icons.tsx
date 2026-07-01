@@ -1,16 +1,16 @@
-type IconProps = { className?: string };
+type IconProps = { className?: string; style?: React.CSSProperties };
 
-export function BoltIcon({ className }: IconProps) {
+export function BoltIcon({ className, style }: IconProps) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" />
     </svg>
   );
 }
 
-export function QrIcon({ className }: IconProps) {
+export function QrIcon({ className, style }: IconProps) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="7" height="7" rx="1" />
       <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -20,9 +20,9 @@ export function QrIcon({ className }: IconProps) {
   );
 }
 
-export function VerifiedIcon({ className }: IconProps) {
+export function VerifiedIcon({ className, style }: IconProps) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2l2.4 1.8 3 .2.9 2.8 2.2 2-.8 2.9.8 2.9-2.2 2-.9 2.8-3 .2L12 22l-2.4-1.8-3-.2-.9-2.8-2.2-2 .8-2.9-.8-2.9 2.2-2 .9-2.8 3-.2z" />
       <path d="M9 12l2 2 4-4" />
@@ -30,9 +30,9 @@ export function VerifiedIcon({ className }: IconProps) {
   );
 }
 
-export function HistoryIcon({ className }: IconProps) {
+export function HistoryIcon({ className, style }: IconProps) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 3v5h5" />
       <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
@@ -41,9 +41,9 @@ export function HistoryIcon({ className }: IconProps) {
   );
 }
 
-export function InstagramIcon({ className }: IconProps) {
+export function InstagramIcon({ className, style }: IconProps) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="2" width="20" height="20" rx="5" />
       <circle cx="12" cy="12" r="4.5" />
@@ -52,10 +52,10 @@ export function InstagramIcon({ className }: IconProps) {
   );
 }
 
-export function PhotoIcon({ className }: IconProps) {
+export function PhotoIcon({ className, style }: IconProps) {
   return (
     <svg
-      className={className}
+      className={className} style={style}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -68,10 +68,10 @@ export function PhotoIcon({ className }: IconProps) {
   );
 }
 
-export function CameraIcon({ className }: IconProps) {
+export function CameraIcon({ className, style }: IconProps) {
   return (
     <svg
-      className={className}
+      className={className} style={style}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -83,10 +83,10 @@ export function CameraIcon({ className }: IconProps) {
   );
 }
 
-export function MonitorIcon({ className }: IconProps) {
+export function MonitorIcon({ className, style }: IconProps) {
   return (
     <svg
-      className={className}
+      className={className} style={style}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -100,10 +100,10 @@ export function MonitorIcon({ className }: IconProps) {
   );
 }
 
-export function SlideshowIcon({ className }: IconProps) {
+export function SlideshowIcon({ className, style }: IconProps) {
   return (
     <svg
-      className={className}
+      className={className} style={style}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -117,10 +117,10 @@ export function SlideshowIcon({ className }: IconProps) {
   );
 }
 
-export function CheckIcon({ className }: IconProps) {
+export function CheckIcon({ className, style }: IconProps) {
   return (
     <svg
-      className={className}
+      className={className} style={style}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -133,10 +133,10 @@ export function CheckIcon({ className }: IconProps) {
   );
 }
 
-export function ArrowLeftIcon({ className }: IconProps) {
+export function ArrowLeftIcon({ className, style }: IconProps) {
   return (
     <svg
-      className={className}
+      className={className} style={style}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -149,10 +149,10 @@ export function ArrowLeftIcon({ className }: IconProps) {
   );
 }
 
-export function GalleryIcon({ className }: IconProps) {
+export function GalleryIcon({ className, style }: IconProps) {
   return (
     <svg
-      className={className}
+      className={className} style={style}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
