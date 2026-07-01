@@ -1,29 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Photo } from "./client";
 
 type Status = "connecting" | "live" | "offline";
+type UsePhotosOptions = {
+  displaySec?: number;
+  deleteAfterSec?: number;
+};
 
 const POLL_MS = 3000;
 
 /**
- * Polls the backend every 3 seconds and keeps a live, newest-first photo list.
- * Uses an incremental `since` cursor so each poll only transfers new photos, and
- * detects a server-side wipe (latestSeq drops below our cursor) to resync.
+ * Polls the backend every 3 seconds and keeps a server-authored photo snapshot.
+ * The server owns display windows, so clients replace local state instead of
+ * replaying or consuming their own queue.
  */
-export function usePhotos() {
+export function usePhotos(options: UsePhotosOptions = {}) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [status, setStatus] = useState<Status>("connecting");
   const [queueDepth, setQueueDepth] = useState(0);
-  const cursor = useRef(0); // highest seq we've seen
+  const [serverOffsetMs, setServerOffsetMs] = useState(0);
+  const displaySec = options.displaySec;
+  const deleteAfterSec = options.deleteAfterSec;
 
   useEffect(() => {
     let alive = true;
 
     const poll = async () => {
       try {
-        const res = await fetch(`/api/photos?since=${cursor.current}`, {
+        const params = new URLSearchParams();
+        if (displaySec !== undefined) params.set("displaySec", String(displaySec));
+        if (deleteAfterSec !== undefined) {
+          params.set("deleteAfterSec", String(deleteAfterSec));
+        }
+        const qs = params.toString();
+        const res = await fetch(`/api/photos${qs ? `?${qs}` : ""}`, {
           cache: "no-store",
         });
         if (!res.ok) throw new Error("bad status");
@@ -31,30 +43,13 @@ export function usePhotos() {
           photos: Photo[];
           latestSeq: number;
           queue: number;
+          serverNow?: number;
         };
         if (!alive) return;
 
-        // Server was cleared/reset → start over.
-        if (data.latestSeq < cursor.current) {
-          cursor.current = 0;
-          setPhotos([]);
-        }
-
-        if (data.photos.length > 0) {
-          cursor.current = Math.max(
-            cursor.current,
-            ...data.photos.map((p) => p.seq)
-          );
-          setPhotos((prev) => {
-            const seen = new Set(prev.map((p) => p.id));
-            const fresh = data.photos
-              .filter((p) => !seen.has(p.id))
-              .reverse(); // newest first
-            return fresh.length ? [...fresh, ...prev] : prev;
-          });
-        }
-
+        setPhotos(data.photos ?? []);
         setQueueDepth(data.queue ?? 0);
+        setServerOffsetMs((data.serverNow ?? Date.now()) - Date.now());
         setStatus("live");
       } catch {
         if (alive) setStatus("offline");
@@ -67,7 +62,7 @@ export function usePhotos() {
       alive = false;
       clearInterval(timer);
     };
-  }, []);
+  }, [displaySec, deleteAfterSec]);
 
-  return { photos, status, queueDepth };
+  return { photos, status, queueDepth, serverOffsetMs };
 }

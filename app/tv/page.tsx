@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { makeQrDataUrl, uploadUrl } from "@/lib/client";
 import { usePhotos } from "@/lib/usePhotos";
@@ -11,91 +11,51 @@ import styles from "./tv.module.css";
 
 const DELETE_AFTER_DISPLAY_SEC = 5 * 60;
 
-function markDisplayed(
-  id: string,
-  deleteAfterSec?: number,
-  mode: "started" | "finished" = "finished"
-) {
-  fetch("/api/photos/displayed", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, deleteAfterSec, mode }),
-  }).catch(() => {});
+function activePhoto(photos: Photo[], now: number) {
+  return (
+    photos.find(
+      (p) =>
+        p.displayStartedAt &&
+        p.displayStartedAt <= now &&
+        p.displayUntil &&
+        p.displayUntil > now
+    ) ?? null
+  );
 }
 
 export default function TvWall() {
-  const { photos, status } = usePhotos();
   const { settings } = useSettings();
-  const SHOW_MS = settings.tvDurationSec * 1000;
+  const { photos, status, serverOffsetMs } = usePhotos({
+    displaySec: settings.tvDurationSec,
+    deleteAfterSec: DELETE_AFTER_DISPLAY_SEC,
+  });
   const [qr, setQr] = useState("");
-
-  // Display queue (same model as the slideshow)
-  const [currentId, setCurrentId] = useState<string | null>(null);
-  const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [queue, setQueue] = useState<string[]>([]);
-  const seenIds = useRef<Set<string>>(new Set());
-  const seededRef = useRef(false);
-  const mountedAtRef = useRef(Date.now());
+  const [clock, setClock] = useState(() => Date.now());
 
   useEffect(() => {
     makeQrDataUrl(uploadUrl()).then(setQr).catch(() => {});
   }, []);
 
-  // 1. Enqueue new arrivals (FIFO, oldest first). On the first pass after a
-  //    refresh, mark existing photos as already-seen so we don't replay them.
   useEffect(() => {
-    if (!seededRef.current) {
-      if (status !== "live") return;
-      const fresh = photos.filter((p) => p.ts > mountedAtRef.current);
-      photos.forEach((p) => seenIds.current.add(p.id));
-      seededRef.current = true;
-      if (fresh.length > 0) {
-        setQueue((q) => [...q, ...fresh.map((p) => p.id).reverse()]);
-      }
-      return;
-    }
-    const fresh = photos.filter((p) => !seenIds.current.has(p.id));
-    if (fresh.length === 0) return;
-    fresh.forEach((p) => seenIds.current.add(p.id));
-    setQueue((q) => [...q, ...fresh.map((p) => p.id).reverse()]);
-  }, [photos, status]);
+    const tick = () => setClock(Date.now());
+    tick();
+    const timer = setInterval(tick, 500);
+    return () => clearInterval(timer);
+  }, []);
 
-  // 2. Dequeue when the screen is idle → stamp a fresh start time
-  useEffect(() => {
-    if (currentId !== null) return;
-    if (queue.length === 0) return;
-    const [next, ...rest] = queue;
-    setCurrentId(next);
-    setStartedAt(Date.now());
-    setQueue(rest);
-    markDisplayed(
-      next,
-      Math.ceil(SHOW_MS / 1000) + DELETE_AFTER_DISPLAY_SEC,
-      "started"
-    );
-  }, [currentId, queue, SHOW_MS]);
-
-  // 3. Auto-advance: hide after the *remaining* time → triggers next dequeue
-  useEffect(() => {
-    if (!currentId || startedAt === null) return;
-    const id = currentId;
-    const remaining = Math.max(0, SHOW_MS - (Date.now() - startedAt));
-    const t = setTimeout(() => {
-      markDisplayed(id, DELETE_AFTER_DISPLAY_SEC, "finished");
-      setCurrentId(null);
-      setStartedAt(null);
-    }, remaining);
-    return () => clearTimeout(t);
-  }, [currentId, startedAt]);
-
-  const photosById = new Map<string, Photo>(photos.map((p) => [p.id, p]));
-  const featured = currentId ? (photosById.get(currentId) ?? null) : null;
+  const now = clock + serverOffsetMs;
+  const featured = activePhoto(photos, now);
 
   const live = status === "live";
-  const queueLen = queue.length;
+  const queueLen = photos.filter((p) => !p.displayStartedAt).length;
 
-  // Elapsed time so the countdown bar resumes where it left off after refresh
-  const elapsed = startedAt !== null ? Date.now() - startedAt : 0;
+  const SHOW_MS =
+    featured?.displayStartedAt && featured?.displayUntil
+      ? Math.max(1000, featured.displayUntil - featured.displayStartedAt)
+      : settings.tvDurationSec * 1000;
+  const elapsed = featured?.displayStartedAt
+    ? Math.min(SHOW_MS, Math.max(0, now - featured.displayStartedAt))
+    : 0;
 
   return (
     <div className={styles.stage}>

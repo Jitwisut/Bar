@@ -3,8 +3,8 @@ import { markPhotoDisplayed } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-// TV/slideshow calls this when a photo has finished showing.
-// The image and metadata are then deleted 5 minutes later by Redis TTL.
+// Compatibility endpoint for already-open TV tabs. New TV pages let /api/photos
+// assign the central display window, but this can still tighten the cleanup TTL.
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as {
     id?: string;

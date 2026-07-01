@@ -10,16 +10,29 @@ import { getPublicSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
-// Polled by the TV every 3s. `?since=<seq>` returns only newer photos.
+// Polled by the TV every 3s. The server owns display windows so all screens
+// converge on the same active photo instead of consuming separate local queues.
 export async function GET(req: NextRequest) {
-  const sinceParam = Number(req.nextUrl.searchParams.get("since") ?? "0");
-  const since = Number.isFinite(sinceParam) ? sinceParam : 0;
-  const photos = await listPhotos(since);
+  const settings = await getPublicSettings();
+  const displaySecParam = Number(
+    req.nextUrl.searchParams.get("displaySec") ?? settings.tvDurationSec
+  );
+  const deleteAfterSecRaw = req.nextUrl.searchParams.get("deleteAfterSec");
+  const deleteAfterSecParam =
+    deleteAfterSecRaw === null ? undefined : Number(deleteAfterSecRaw);
+  const displaySec = Number.isFinite(displaySecParam)
+    ? displaySecParam
+    : settings.tvDurationSec;
+  const deleteAfterSec = Number.isFinite(deleteAfterSecParam)
+    ? deleteAfterSecParam
+    : undefined;
+  const photos = await listPhotos(0, { displaySec, deleteAfterSec });
   return NextResponse.json(
     {
       photos,
       latestSeq: await latestSeq(),
       queue: await getQueueDepth(),
+      serverNow: Date.now(),
     },
     { headers: { "Cache-Control": "no-store" } }
   );

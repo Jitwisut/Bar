@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useUploadQr } from "@/lib/useUploadQr";
 import { usePhotos } from "@/lib/usePhotos";
@@ -11,83 +11,44 @@ import styles from "./slideshow.module.css";
 
 const DELETE_AFTER_DISPLAY_SEC = 5 * 60;
 
-function markDisplayed(
-  id: string,
-  deleteAfterSec?: number,
-  mode: "started" | "finished" = "finished"
-) {
-  fetch("/api/photos/displayed", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, deleteAfterSec, mode }),
-  }).catch(() => {});
+function activePhoto(photos: Photo[], now: number) {
+  return (
+    photos.find(
+      (p) =>
+        p.displayStartedAt &&
+        p.displayStartedAt <= now &&
+        p.displayUntil &&
+        p.displayUntil > now
+    ) ?? null
+  );
 }
 
 export default function Slideshow() {
-  const { photos, status } = usePhotos();
   const { src: qr } = useUploadQr();
   const { settings } = useSettings();
-  const SHOW_MS = settings.slideshowDurationSec * 1000;
+  const { photos, serverOffsetMs } = usePhotos({
+    displaySec: settings.slideshowDurationSec,
+    deleteAfterSec: DELETE_AFTER_DISPLAY_SEC,
+  });
+  const [clock, setClock] = useState(() => Date.now());
 
-  // photo id currently on screen (null = idle)
-  const [currentId, setCurrentId] = useState<string | null>(null);
-  // ids waiting to be shown, in arrival order
-  const [queue, setQueue] = useState<string[]>([]);
-  // set of ids we've already enqueued or shown — prevents re-adding on each poll
-  const seenIds = useRef<Set<string>>(new Set());
-  const seededRef = useRef(false);
-  const mountedAtRef = useRef(Date.now());
-
-  // ── 1. Enqueue new arrivals ──────────────────────────────────────────────
   useEffect(() => {
-    if (!seededRef.current) {
-      if (status !== "live") return;
-      const fresh = photos.filter((p) => p.ts > mountedAtRef.current);
-      photos.forEach((p) => seenIds.current.add(p.id));
-      seededRef.current = true;
-      if (fresh.length > 0) {
-        setQueue((q) => [...q, ...fresh.map((p) => p.id).reverse()]);
-      }
-      return;
-    }
+    const tick = () => setClock(Date.now());
+    tick();
+    const timer = setInterval(tick, 500);
+    return () => clearInterval(timer);
+  }, []);
 
-    const fresh = photos.filter((p) => !seenIds.current.has(p.id));
-    if (fresh.length === 0) return;
-    fresh.forEach((p) => seenIds.current.add(p.id));
-    // newest-first from usePhotos, so reverse to queue oldest-first (FIFO)
-    setQueue((q) => [...q, ...fresh.map((p) => p.id).reverse()]);
-  }, [photos, status]);
-
-  // ── 2. Dequeue when screen is idle ───────────────────────────────────────
-  useEffect(() => {
-    if (currentId !== null) return; // something is showing — wait
-    if (queue.length === 0) return; // nothing waiting
-    const [next, ...rest] = queue;
-    setCurrentId(next);
-    setQueue(rest);
-    markDisplayed(
-      next,
-      Math.ceil(SHOW_MS / 1000) + DELETE_AFTER_DISPLAY_SEC,
-      "started"
-    );
-  }, [currentId, queue, SHOW_MS]);
-
-  // ── 3. Auto-advance: hide after SHOW_MS → triggers dequeue effect ────────
-  useEffect(() => {
-    if (!currentId) return;
-    const id = currentId;
-    const t = setTimeout(() => {
-      markDisplayed(id, DELETE_AFTER_DISPLAY_SEC, "finished");
-      setCurrentId(null);
-    }, SHOW_MS);
-    return () => clearTimeout(t);
-  }, [currentId, SHOW_MS]);
-
-  // Resolve the current photo object for rendering
-  const photosById = new Map<string, Photo>(photos.map((p) => [p.id, p]));
-  const current = currentId ? (photosById.get(currentId) ?? null) : null;
-
-  const queueLen = queue.length;
+  const now = clock + serverOffsetMs;
+  const current = activePhoto(photos, now);
+  const queueLen = photos.filter((p) => !p.displayStartedAt).length;
+  const SHOW_MS =
+    current?.displayStartedAt && current?.displayUntil
+      ? Math.max(1000, current.displayUntil - current.displayStartedAt)
+      : settings.slideshowDurationSec * 1000;
+  const elapsed = current?.displayStartedAt
+    ? Math.min(SHOW_MS, Math.max(0, now - current.displayStartedAt))
+    : 0;
 
   return (
     <div className={styles.stage}>
@@ -103,7 +64,10 @@ export default function Slideshow() {
           <div
             key={current.id}
             className={styles.countdown}
-            style={{ animationDuration: `${SHOW_MS}ms` }}
+            style={{
+              animationDuration: `${SHOW_MS}ms`,
+              animationDelay: `-${elapsed}ms`,
+            }}
           />
 
           <div className={styles.frame}>

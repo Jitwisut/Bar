@@ -12,6 +12,9 @@ export type Photo = {
   ts: number;
   tint: string;
   status: PhotoStatus;
+  displayStartedAt?: number;
+  displayUntil?: number;
+  deleteAt?: number;
 };
 
 const TINTS = [
@@ -35,6 +38,9 @@ function key(name: string) {
 const seqKey = key("seq");
 const approvedKey = key("approved");
 const pendingKey = key("pending");
+const activeKey = key("active");
+const cleanupKey = key("cleanup");
+const scheduleLockKey = key("schedule-lock");
 const metaKey = (id: string) => key(`meta:${id}`);
 const imageKey = (id: string) => key(`image:${id}`);
 
@@ -100,21 +106,213 @@ async function redisMetas(ids: string[], zsetForCleanup?: string): Promise<Photo
   return photos;
 }
 
+function clampDisplaySec(value: unknown, fallback = 40) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(10 * 60, Math.max(3, Math.round(n)));
+}
+
+function clampDeleteAfterSec(value: unknown) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return DISPLAY_DELETE_SEC;
+  return Math.min(24 * 60 * 60, Math.max(30, Math.round(n)));
+}
+
+function secondsUntil(ts: number, now = Date.now()) {
+  return Math.max(30, Math.ceil((ts - now) / 1000));
+}
+
+function isVisiblePhoto(photo: Photo, now = Date.now()) {
+  if (photo.status !== "approved") return false;
+  if (photo.deleteAt && photo.deleteAt <= now) return false;
+  if (photo.displayUntil && photo.displayUntil <= now) return false;
+  return true;
+}
+
+function isActivePhoto(photo: Photo, now = Date.now()) {
+  return Boolean(
+    photo.status === "approved" &&
+      photo.displayStartedAt &&
+      photo.displayStartedAt <= now &&
+      photo.displayUntil &&
+      photo.displayUntil > now
+  );
+}
+
+async function cleanupRedisDisplayed(now = Date.now()) {
+  const ids = await redisCommand<string[]>([
+    "ZRANGEBYSCORE",
+    cleanupKey,
+    "-inf",
+    now,
+    "LIMIT",
+    0,
+    100,
+  ]);
+  if (!ids?.length) return;
+
+  const activeId = await redisCommand<string>(["GET", activeKey]);
+  const keys = ids.flatMap((id) => [metaKey(id), imageKey(id)]);
+  await Promise.all([
+    redisCommand(["ZREM", cleanupKey, ...ids]),
+    redisCommand(["ZREM", approvedKey, ...ids]),
+    redisCommand(["ZREM", pendingKey, ...ids]),
+    activeId && ids.includes(activeId)
+      ? redisCommand(["DEL", activeKey])
+      : Promise.resolve(null),
+    keys.length ? redisCommand(["DEL", ...keys]) : Promise.resolve(null),
+  ]);
+}
+
+async function saveRedisDisplayedPhoto(photo: Photo, now = Date.now()) {
+  const ttl = secondsUntil(photo.deleteAt ?? now + PHOTO_TTL_SEC * 1000, now);
+  await Promise.all([
+    redisCommand(["SETEX", metaKey(photo.id), ttl, JSON.stringify(photo)]),
+    redisCommand(["EXPIRE", imageKey(photo.id), ttl]),
+    photo.deleteAt
+      ? redisCommand(["ZADD", cleanupKey, photo.deleteAt, photo.id])
+      : Promise.resolve(null),
+  ]);
+}
+
+async function readRedisPhoto(id: string): Promise<Photo | null> {
+  return parsePhoto(await redisCommand<string>(["GET", metaKey(id)]));
+}
+
+async function currentRedisActive(now = Date.now()): Promise<string | null> {
+  const id = await redisCommand<string>(["GET", activeKey]);
+  if (!id) return null;
+  const photo = await readRedisPhoto(id);
+  if (photo && isActivePhoto(photo, now)) return id;
+  if (photo?.displayUntil && photo.displayUntil <= now) {
+    await redisCommand(["ZREM", approvedKey, id]);
+  }
+  await redisCommand(["DEL", activeKey]);
+  return null;
+}
+
+async function startNextRedisPhoto(
+  displaySec: number,
+  deleteAfterSec: number,
+  now = Date.now()
+) {
+  if (await currentRedisActive(now)) return;
+
+  const token = crypto.randomUUID();
+  const locked = await redisCommand<string>([
+    "SET",
+    scheduleLockKey,
+    token,
+    "NX",
+    "PX",
+    2000,
+  ]);
+  if (locked !== "OK") return;
+
+  try {
+    if (await currentRedisActive(now)) return;
+
+    const ids = await redisCommand<string[]>(["ZRANGE", approvedKey, 0, 500]);
+    for (const id of ids ?? []) {
+      const photo = await readRedisPhoto(id);
+      if (!photo) {
+        await redisCommand(["ZREM", approvedKey, id]);
+        continue;
+      }
+      if (photo.displayUntil && photo.displayUntil <= now) {
+        await redisCommand(["ZREM", approvedKey, id]);
+        continue;
+      }
+      if (!isVisiblePhoto(photo, now)) continue;
+      if (isActivePhoto(photo, now)) {
+        await redisCommand([
+          "SET",
+          activeKey,
+          id,
+          "PX",
+          Math.max(1000, (photo.displayUntil ?? now) - now),
+        ]);
+        return;
+      }
+      if (photo.displayStartedAt) continue;
+
+      const seq = Number(await redisCommand<number>(["INCR", seqKey])) || photo.seq;
+      photo.seq = seq;
+      photo.displayStartedAt = now;
+      photo.displayUntil = now + displaySec * 1000;
+      photo.deleteAt = photo.displayUntil + deleteAfterSec * 1000;
+      await Promise.all([
+        saveRedisDisplayedPhoto(photo, now),
+        redisCommand([
+          "SET",
+          activeKey,
+          id,
+          "PX",
+          Math.max(1000, photo.displayUntil - now),
+        ]),
+      ]);
+      return;
+    }
+  } finally {
+    const currentToken = await redisCommand<string>(["GET", scheduleLockKey]);
+    if (currentToken === token) await redisCommand(["DEL", scheduleLockKey]);
+  }
+}
+
+function cleanupMemoryDisplayed(now = Date.now()) {
+  const s = getState();
+  const keep: Photo[] = [];
+  for (const photo of s.photos) {
+    if (photo.deleteAt && photo.deleteAt <= now) {
+      s.buffers.delete(photo.id);
+    } else {
+      keep.push(photo);
+    }
+  }
+  s.photos = keep;
+}
+
+function startNextMemoryPhoto(displaySec: number, deleteAfterSec: number, now = Date.now()) {
+  const s = getState();
+  if (s.photos.some((p) => isActivePhoto(p, now))) return;
+  const photo = s.photos.find((p) => isVisiblePhoto(p, now) && !p.displayStartedAt);
+  if (!photo) return;
+  photo.seq = ++s.seq;
+  photo.displayStartedAt = now;
+  photo.displayUntil = now + displaySec * 1000;
+  photo.deleteAt = photo.displayUntil + deleteAfterSec * 1000;
+}
+
 export async function getQueueDepth(): Promise<number> {
   if (hasRedis()) return 0;
   return getState().queue.pending;
 }
 
 /** Photos shown on the TV — only approved ones. */
-export async function listPhotos(sinceSeq = 0): Promise<Photo[]> {
+export async function listPhotos(
+  sinceSeq = 0,
+  options: { displaySec?: unknown; deleteAfterSec?: unknown; schedule?: boolean } = {}
+): Promise<Photo[]> {
+  const now = Date.now();
+  const displaySec = clampDisplaySec(options.displaySec);
+  const deleteAfterSec = clampDeleteAfterSec(options.deleteAfterSec);
+
   if (hasRedis()) {
-    const min = sinceSeq > 0 ? sinceSeq + 1 : "-inf";
-    const ids = await redisCommand<string[]>(["ZRANGEBYSCORE", approvedKey, min, "+inf"]);
-    return redisMetas(ids ?? [], approvedKey);
+    await cleanupRedisDisplayed(now);
+    if (options.schedule !== false) {
+      await startNextRedisPhoto(displaySec, deleteAfterSec, now);
+    }
+    const ids = await redisCommand<string[]>(["ZRANGE", approvedKey, 0, -1]);
+    const photos = await redisMetas(ids ?? [], approvedKey);
+    return photos.filter((p) => isVisiblePhoto(p, now));
   }
 
+  cleanupMemoryDisplayed(now);
+  if (options.schedule !== false) {
+    startNextMemoryPhoto(displaySec, deleteAfterSec, now);
+  }
   const s = getState();
-  const approved = s.photos.filter((p) => p.status === "approved");
+  const approved = s.photos.filter((p) => isVisiblePhoto(p, now));
   return sinceSeq > 0 ? approved.filter((p) => p.seq > sinceSeq) : approved;
 }
 
@@ -220,6 +418,9 @@ export async function approvePhoto(id: string): Promise<boolean> {
     p.status = "approved";
     p.seq = seq;
     p.ts = Date.now();
+    delete p.displayStartedAt;
+    delete p.displayUntil;
+    delete p.deleteAt;
 
     await Promise.all([
       redisCommand(["SETEX", metaKey(id), PHOTO_TTL_SEC, JSON.stringify(p)]),
@@ -237,14 +438,11 @@ export async function approvePhoto(id: string): Promise<boolean> {
     p.status = "approved";
     p.seq = ++s.seq;
     p.ts = Date.now();
+    delete p.displayStartedAt;
+    delete p.displayUntil;
+    delete p.deleteAt;
     return true;
   }).done;
-}
-
-function clampDeleteAfterSec(value: unknown) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return DISPLAY_DELETE_SEC;
-  return Math.min(24 * 60 * 60, Math.max(30, Math.round(n)));
 }
 
 /** Schedule a shown photo for deletion; optionally remove it from the approved feed. */
@@ -256,25 +454,23 @@ export async function markPhotoDisplayed(
   const ttl = clampDeleteAfterSec(deleteAfterSec);
 
   if (hasRedis()) {
-    const exists = await redisCommand<number>(["EXISTS", metaKey(id)]);
-    await Promise.all([
-      removeFromFeed
-        ? redisCommand(["ZREM", approvedKey, id])
-        : Promise.resolve(null),
-      redisCommand(["EXPIRE", metaKey(id), ttl]),
-      redisCommand(["EXPIRE", imageKey(id), ttl]),
-    ]);
-    return (exists ?? 0) > 0;
+    const photo = await readRedisPhoto(id);
+    if (!photo) return false;
+    const now = Date.now();
+    const base = removeFromFeed ? Math.max(now, photo.displayUntil ?? now) : now;
+    const deleteAt = base + ttl * 1000;
+    photo.deleteAt = photo.deleteAt ? Math.min(photo.deleteAt, deleteAt) : deleteAt;
+    await saveRedisDisplayedPhoto(photo, now);
+    return true;
   }
 
   const s = getState();
-  if (!s.photos.some((p) => p.id === id)) return false;
-  if (!removeFromFeed) return true;
-  setTimeout(() => {
-    const idx = s.photos.findIndex((p) => p.id === id);
-    if (idx !== -1) s.photos.splice(idx, 1);
-    s.buffers.delete(id);
-  }, ttl * 1000);
+  const photo = s.photos.find((p) => p.id === id);
+  if (!photo) return false;
+  const now = Date.now();
+  const base = removeFromFeed ? Math.max(now, photo.displayUntil ?? now) : now;
+  const deleteAt = base + ttl * 1000;
+  photo.deleteAt = photo.deleteAt ? Math.min(photo.deleteAt, deleteAt) : deleteAt;
   return true;
 }
 
@@ -284,6 +480,7 @@ export async function rejectPhoto(id: string): Promise<boolean> {
     const removed = await redisCommand<number>(["ZREM", pendingKey, id]);
     await Promise.all([
       redisCommand(["ZREM", approvedKey, id]),
+      redisCommand(["ZREM", cleanupKey, id]),
       redisCommand(["DEL", metaKey(id), imageKey(id)]),
     ]);
     return (removed ?? 0) > 0;
@@ -307,7 +504,16 @@ export async function clearPhotos(): Promise<void> {
     ]);
     const ids = Array.from(new Set([...(approvedIds ?? []), ...(pendingIds ?? [])]));
     const keys = ids.flatMap((id) => [metaKey(id), imageKey(id)]);
-    await redisCommand(["DEL", approvedKey, pendingKey, seqKey, ...keys]);
+    await redisCommand([
+      "DEL",
+      approvedKey,
+      pendingKey,
+      cleanupKey,
+      activeKey,
+      scheduleLockKey,
+      seqKey,
+      ...keys,
+    ]);
     return;
   }
 
