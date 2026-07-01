@@ -11,6 +11,14 @@ import styles from "./tv.module.css";
 
 const STORE_KEY = "tv_featured_v1"; // persists { id, at } across refresh
 
+function markDisplayed(id: string) {
+  fetch("/api/photos/displayed", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  }).catch(() => {});
+}
+
 export default function TvWall() {
   const { photos, status } = usePhotos();
   const { settings } = useSettings();
@@ -59,7 +67,7 @@ export default function TvWall() {
     } catch {
       /* ignore */
     }
-  }, [currentId, startedAt]);
+  }, [currentId, startedAt, SHOW_MS]);
 
   // 1. Enqueue new arrivals (FIFO, oldest first). On the first pass after a
   //    refresh, mark existing photos as already-seen so we don't replay them.
@@ -90,8 +98,10 @@ export default function TvWall() {
   // 3. Auto-advance: hide after the *remaining* time → triggers next dequeue
   useEffect(() => {
     if (!currentId || startedAt === null) return;
+    const id = currentId;
     const remaining = Math.max(0, SHOW_MS - (Date.now() - startedAt));
     const t = setTimeout(() => {
+      markDisplayed(id);
       setCurrentId(null);
       setStartedAt(null);
     }, remaining);

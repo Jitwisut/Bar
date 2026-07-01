@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import crypto from "crypto";
+import { hasRedis, redisCommand } from "./redis";
 
 export type PaymentSettings = {
   enabled: boolean;
@@ -32,8 +33,25 @@ type StoredSettings = PublicSettings & {
   pinSalt: string | null;
 };
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const FILE = path.join(DATA_DIR, "settings.json");
+const FILE =
+  process.env.SETTINGS_FILE_PATH ??
+  path.join(process.cwd(), "data", "settings.json");
+const DATA_DIR = path.dirname(FILE);
+const SETTINGS_KV_KEY = process.env.SETTINGS_KV_KEY ?? "bar:settings:v1";
+
+function shouldUseFileStore(): boolean {
+  return !hasRedis() && (!process.env.VERCEL || Boolean(process.env.SETTINGS_FILE_PATH));
+}
+
+let warnedVolatileStore = false;
+
+function warnVolatileStore() {
+  if (!process.env.VERCEL || hasRedis() || warnedVolatileStore) return;
+  warnedVolatileStore = true;
+  console.warn(
+    "Settings are using in-memory storage on Vercel. Configure KV_REST_API_URL/KV_REST_API_TOKEN for durable admin settings."
+  );
+}
 
 // Defaults mirror the values currently hardcoded across the app, so behaviour
 // is identical until the owner changes something.
@@ -114,24 +132,44 @@ function getState(): State {
   return g.__neonSettings;
 }
 
+function mergeWithDefaults(parsed: Partial<StoredSettings>): StoredSettings {
+  return {
+    ...DEFAULTS,
+    ...parsed,
+    payment: { ...DEFAULTS.payment, ...(parsed.payment ?? {}) },
+    captions: Array.isArray(parsed.captions)
+      ? parsed.captions
+      : DEFAULTS.captions,
+  };
+}
+
+async function readPersistedSettings(): Promise<Partial<StoredSettings> | null> {
+  if (hasRedis()) {
+    const raw = await redisCommand<string>(["GET", SETTINGS_KV_KEY]);
+    if (!raw) return null;
+    return JSON.parse(raw) as Partial<StoredSettings>;
+  }
+
+  if (!shouldUseFileStore()) {
+    warnVolatileStore();
+    return null;
+  }
+
+  try {
+    const raw = await fs.readFile(FILE, "utf8");
+    return JSON.parse(raw) as Partial<StoredSettings>;
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    if (err.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
 async function ensureLoaded(): Promise<State> {
   const s = getState();
   if (s.loaded) return s;
-  try {
-    const raw = await fs.readFile(FILE, "utf8");
-    const parsed = JSON.parse(raw) as Partial<StoredSettings>;
-    // Deep-merge onto defaults so new fields added later still have a value.
-    s.data = {
-      ...DEFAULTS,
-      ...parsed,
-      payment: { ...DEFAULTS.payment, ...(parsed.payment ?? {}) },
-      captions: Array.isArray(parsed.captions)
-        ? parsed.captions
-        : DEFAULTS.captions,
-    };
-  } catch {
-    s.data = structuredClone(DEFAULTS);
-  }
+  const parsed = await readPersistedSettings();
+  s.data = parsed ? mergeWithDefaults(parsed) : structuredClone(DEFAULTS);
   s.loaded = true;
   return s;
 }
@@ -161,6 +199,16 @@ export async function isPinSet(): Promise<boolean> {
 }
 
 async function persist(s: State) {
+  if (hasRedis()) {
+    await redisCommand(["SET", SETTINGS_KV_KEY, JSON.stringify(s.data)]);
+    return;
+  }
+
+  if (!shouldUseFileStore()) {
+    warnVolatileStore();
+    return;
+  }
+
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(FILE, JSON.stringify(s.data, null, 2));
 }

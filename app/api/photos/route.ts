@@ -14,9 +14,13 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const sinceParam = Number(req.nextUrl.searchParams.get("since") ?? "0");
   const since = Number.isFinite(sinceParam) ? sinceParam : 0;
-  const photos = listPhotos(since);
+  const photos = await listPhotos(since);
   return NextResponse.json(
-    { photos, latestSeq: latestSeq(), queue: getQueueDepth() },
+    {
+      photos,
+      latestSeq: await latestSeq(),
+      queue: await getQueueDepth(),
+    },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

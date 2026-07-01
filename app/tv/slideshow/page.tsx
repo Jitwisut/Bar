@@ -9,6 +9,14 @@ import { ArrowLeftIcon, InstagramIcon } from "@/components/icons";
 import type { Photo } from "@/lib/client";
 import styles from "./slideshow.module.css";
 
+function markDisplayed(id: string) {
+  fetch("/api/photos/displayed", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  }).catch(() => {});
+}
+
 export default function Slideshow() {
   const { photos } = usePhotos();
   const { src: qr } = useUploadQr();
@@ -43,9 +51,13 @@ export default function Slideshow() {
   // ── 3. Auto-advance: hide after SHOW_MS → triggers dequeue effect ────────
   useEffect(() => {
     if (!currentId) return;
-    const t = setTimeout(() => setCurrentId(null), SHOW_MS);
+    const id = currentId;
+    const t = setTimeout(() => {
+      markDisplayed(id);
+      setCurrentId(null);
+    }, SHOW_MS);
     return () => clearTimeout(t);
-  }, [currentId]);
+  }, [currentId, SHOW_MS]);
 
   // Resolve the current photo object for rendering
   const photosById = new Map<string, Photo>(photos.map((p) => [p.id, p]));

@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   return NextResponse.json(
-    { pending: listPending() },
+    { pending: await listPending() },
     { headers: { "Cache-Control": "no-store" } }
   );
 }
