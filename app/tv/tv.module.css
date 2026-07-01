@@ -1,4 +1,4 @@
-/* Live Warp Feed — cyberpunk TV layout (75% featured / 25% sidebar) */
+/* Split TV layout — big 1:1 photo (left) + caption & warp (right) */
 .stage {
   position: relative;
   width: 100%;
@@ -18,25 +18,164 @@
   opacity: 0.85;
 }
 
-/* ── Left main area ─────────────────────────────────────────────────────── */
-.mainArea {
+/* ── Left: photo (wider, fills full height) ────────────────────────────── */
+.photoHalf {
   position: relative;
   z-index: 10;
-  width: 75%;
+  flex: 1 1 58%;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+/* Frame fills the whole left column — portrait 9:16 shows tall & bold */
+.photoSquare {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid rgba(0, 240, 255, 0.35);
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.18);
+  background: rgba(18, 19, 24, 0.7);
+}
+
+/* Blurred backdrop fills the frame behind the (contained) photo */
+.featuredBlur {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(40px) brightness(0.4);
+  transform: scale(1.15);
+  animation: fadeIn 0.5s ease both;
+}
+
+/* Main photo — fully visible (never cropped), max size within the frame */
+.featuredImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: fadeIn 0.5s ease both;
+  z-index: 1;
+}
+
+/* countdown bar */
+.countdown {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 5px;
+  width: 100%;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
+  transform-origin: left;
+  animation: countdownShrink 40s linear forwards;
+  z-index: 5;
+}
+
+@keyframes countdownShrink {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .countdown { animation: none; }
+}
+
+.hudTopLeft {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 3;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.7;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+}
+
+.hudBars {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 26px;
+}
+
+.hudBars span {
+  width: 4px;
+  background: var(--accent);
+}
+
+/* Photo empty state */
+.featuredEmpty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.emptyBolt {
+  width: 64px;
+  height: 64px;
+  color: var(--accent);
+  filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.6));
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.emptyTitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 800;
+  font-size: clamp(22px, 2.4vw, 32px);
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 10px var(--accent);
+}
+
+.emptySub {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+/* ── Right: info (narrower) ────────────────────────────────────────────── */
+.infoHalf {
+  position: relative;
+  z-index: 10;
+  flex: 1 1 42%;
+  min-width: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 20px;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 26px 36px 30px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .statusBar {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 48px;
-  margin-bottom: 12px;
-  flex: 0 0 auto;
 }
 
 .brand {
@@ -46,8 +185,8 @@
 }
 
 .brandBolt {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   color: var(--accent);
   filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.8));
 }
@@ -57,7 +196,7 @@
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 800;
-  font-size: clamp(20px, 2.2vw, 32px);
+  font-size: clamp(18px, 1.7vw, 26px);
   letter-spacing: -0.02em;
   text-transform: uppercase;
   color: var(--accent);
@@ -71,9 +210,8 @@
   padding: 6px 14px;
   border-radius: 999px;
   background: rgba(18, 19, 24, 0.7);
-  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -94,130 +232,26 @@
   animation: none;
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-/* Cinematic featured area */
-.cinematic {
-  position: relative;
+/* Caption zone */
+.captionZone {
   flex: 1;
-  border-radius: 12px;
-  overflow: hidden;
-  background: rgba(18, 19, 24, 0.7);
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
-}
-
-/* 40s countdown bar — key prop restarts the animation per photo */
-.countdown {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 4px;
-  width: 100%;
-  background: var(--accent);
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
-  transform-origin: left;
-  animation: countdownShrink 40s linear forwards;
-  z-index: 8;
-}
-
-@keyframes countdownShrink {
-  from { transform: scaleX(1); }
-  to { transform: scaleX(0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .countdown { animation: none; }
-}
-
-/* Blurred backdrop — fills empty space beside portrait/landscape photos */
-.featuredBlur {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: blur(36px) brightness(0.5);
-  transform: scale(1.15);
-  animation: fadeIn 0.5s ease both;
-}
-
-/* Main photo — fully visible, never cropped */
-.featuredImg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  animation: fadeIn 0.5s ease both;
-  z-index: 1;
-}
-
-.featuredScrim {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: linear-gradient(
-    to top,
-    #050507 0%,
-    rgba(5, 5, 7, 0.4) 40%,
-    transparent 75%
-  );
-}
-
-.hudTopLeft {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 3;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent);
-  opacity: 0.7;
-}
-
-.hudBars {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 3;
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 28px;
-}
-
-.hudBars span {
-  width: 4px;
-  background: var(--accent);
-}
-
-.featuredContent {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  z-index: 3;
-  width: 100%;
-  padding: 48px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px 0;
 }
 
 .profile {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 16px;
 }
 
 .avatar {
-  width: 68px;
-  height: 68px;
+  width: 58px;
+  height: 58px;
   flex: 0 0 auto;
   border-radius: 50%;
   border: 2px solid var(--accent-2);
@@ -229,8 +263,8 @@
 }
 
 .avatarIcon {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   color: var(--accent-2);
 }
 
@@ -238,129 +272,71 @@
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 800;
-  font-size: clamp(24px, 2.6vw, 38px);
-  line-height: 1.1;
+  font-size: clamp(22px, 2vw, 32px);
+  line-height: 1.05;
   color: var(--accent-2);
-  text-shadow: 0 0 12px rgba(255, 36, 228, 0.6);
+  text-shadow: 0 0 14px rgba(255, 36, 228, 0.6);
+  word-break: break-word;
 }
 
 .profileMeta {
-  font-size: clamp(13px, 1.1vw, 16px);
+  font-size: clamp(12px, 0.9vw, 15px);
   color: var(--accent);
 }
 
+/* Caption text — sized to read from across the room, not overwhelming */
 .message {
   margin: 0;
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 800;
-  font-size: clamp(28px, 3.6vw, 48px);
-  line-height: 1.1;
-  text-transform: uppercase;
+  font-size: clamp(26px, 2.8vw, 44px);
+  line-height: 1.15;
   color: var(--text);
-  text-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
-  max-width: 80%;
-  border-left: 4px solid var(--accent);
-  padding-left: 16px;
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
+  border-left: 5px solid var(--accent);
+  padding-left: 18px;
+  word-break: break-word;
 }
 
-/* Featured empty state */
-.featuredEmpty {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  text-align: center;
-}
-
-.emptyBolt {
-  width: 64px;
-  height: 64px;
-  color: var(--accent);
-  filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.6));
-  animation: blink 2s infinite;
-}
-
-.emptyTitle {
+.messageMuted {
+  margin: 0;
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 800;
-  font-size: clamp(24px, 3vw, 38px);
-  text-transform: uppercase;
-  color: var(--accent);
-  text-shadow: 0 0 10px var(--accent);
-}
-
-.emptySub {
-  font-size: 16px;
+  font-size: clamp(22px, 2.2vw, 34px);
+  line-height: 1.2;
   color: var(--muted);
+  border-left: 5px solid var(--accent);
+  padding-left: 18px;
 }
 
-/* ── Right sidebar ──────────────────────────────────────────────────────── */
-.sidebar {
-  position: relative;
-  z-index: 10;
-  width: 25%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: rgba(13, 14, 19, 0.9);
-  backdrop-filter: blur(24px);
-}
-
-.qrSection {
-  position: relative;
-  overflow: hidden;
-  padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(18, 19, 24, 0.7);
-}
-
-.qrBlob {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 64px;
-  height: 64px;
-  background: rgba(0, 240, 255, 0.2);
-  filter: blur(32px);
-}
-
-.qrTitle {
-  margin: 0 0 4px;
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 800;
+.captionIdle {
   font-size: clamp(16px, 1.5vw, 22px);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--accent);
-  text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 22ch;
 }
 
-.qrSub {
-  margin: 0 0 18px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+/* Warp row — QR + info, bottom of right half */
+.warpRow {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .qrPlate {
   position: relative;
-  width: 75%;
-  margin: 0 auto;
+  flex: 0 0 auto;
+  width: clamp(120px, 11vw, 168px);
   aspect-ratio: 1;
   background: #fff;
-  padding: 10px;
+  padding: 8px;
   border-radius: 10px;
   box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
 }
 
@@ -373,7 +349,6 @@
 
 .qrScan {
   position: absolute;
-  top: 0;
   left: 0;
   width: 100%;
   height: 3px;
@@ -383,90 +358,55 @@
 }
 
 @keyframes qrscan {
-  0%, 100% { top: 4%; }
-  50% { top: 92%; }
+  0%, 100% { top: 6%; }
+  50% { top: 90%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .qrScan { animation: none; }
 }
 
-.qrCaption {
-  margin-top: 12px;
-  text-align: center;
+.warpText {
+  min-width: 0;
 }
 
-.qrCaption span {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  background: rgba(52, 52, 58, 0.5);
-  padding: 4px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Sidebar fill — shows the queue panel when photos are waiting */
-.sidebarFill {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.queuePanel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 24px 28px;
-  border: 1px solid rgba(0, 240, 255, 0.25);
-  background: rgba(18, 19, 24, 0.6);
-}
-
-.queueNum {
+.warpTitle {
   font-family: var(--font-display);
   font-style: italic;
   font-weight: 800;
-  font-size: 48px;
-  line-height: 1;
+  font-size: clamp(20px, 2vw, 30px);
+  text-transform: uppercase;
   color: var(--accent);
-  text-shadow: 0 0 14px rgba(0, 240, 255, 0.6);
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
 }
 
-.queueLabel {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.warpSub {
+  margin-top: 4px;
+  font-size: clamp(14px, 1.2vw, 18px);
   color: var(--muted);
 }
 
-/* Footer stats */
-.statsBar {
-  flex: 0 0 auto;
+.warpStats {
+  margin-top: 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(18, 19, 24, 0.7);
-}
-
-.statLabel {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
+  gap: 12px;
 }
 
 .statValueCyan {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 24px;
+  font-size: clamp(24px, 2.2vw, 34px);
+  line-height: 1;
   color: var(--accent);
   text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+.statLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
 }
 
 .slideLink {
@@ -475,6 +415,7 @@
   gap: 8px;
   height: 40px;
   padding: 0 16px;
+  margin-left: auto;
   font-size: 13px;
   font-weight: 700;
   color: var(--accent);

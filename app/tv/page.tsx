@@ -110,8 +110,53 @@ export default function TvWall() {
       <div className={styles.bgGlow} aria-hidden />
       <div className="scanlines" aria-hidden />
 
-      {/* ── Left: featured ──────────────────────────────────────────────── */}
-      <div className={styles.mainArea}>
+      {/* ── Left half: big 1:1 photo (crop cover) ───────────────────────── */}
+      <div className={styles.photoHalf}>
+        {featured ? (
+          <div className={styles.photoSquare}>
+            {/* countdown bar — resumes at the elapsed position after refresh */}
+            <div
+              key={`bar-${featured.id}`}
+              className={styles.countdown}
+              style={{ animationDelay: `-${elapsed}ms` }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              key={`blur-${featured.id}`}
+              className={styles.featuredBlur}
+              src={`/api/img/${featured.id}`}
+              alt=""
+              aria-hidden
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              key={`img-${featured.id}`}
+              className={styles.featuredImg}
+              src={`/api/img/${featured.id}`}
+              alt={featured.name}
+            />
+            <div className={styles.hudTopLeft}>
+              SYS.WARP.ACTIVE // {featured.id.slice(0, 4).toUpperCase()}
+            </div>
+            <div className={styles.hudBars}>
+              <span style={{ height: "40%", opacity: 0.4 }} />
+              <span style={{ height: "80%", opacity: 0.8 }} />
+              <span style={{ height: "55%", opacity: 0.6 }} />
+            </div>
+          </div>
+        ) : (
+          <div className={styles.photoSquare}>
+            <div className={styles.featuredEmpty}>
+              <BoltIcon className={styles.emptyBolt} />
+              <div className={styles.emptyTitle}>รอรูปขึ้นจอ</div>
+              <div className={styles.emptySub}>สแกน QR เพื่อส่งรูป</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Right half: caption + IG + warp QR ──────────────────────────── */}
+      <aside className={styles.infoHalf}>
         <header className={styles.statusBar}>
           <div className={styles.brand}>
             <BoltIcon className={styles.brandBolt} />
@@ -119,79 +164,36 @@ export default function TvWall() {
           </div>
           <div className={styles.liveTag}>
             <span className={`${styles.liveDot} ${live ? "" : styles.off}`} />
-            <span>
-              {queueLen > 0 ? `คิว ${queueLen} รูป` : "LIVE FEED / สด"}
-            </span>
+            <span>{queueLen > 0 ? `คิว ${queueLen} รูป` : "LIVE / สด"}</span>
           </div>
         </header>
 
-        <div className={styles.cinematic}>
+        <div className={styles.captionZone}>
           {featured ? (
             <>
-              {/* countdown bar — resumes at the elapsed position after refresh */}
-              <div
-                key={`bar-${featured.id}`}
-                className={styles.countdown}
-                style={{ animationDelay: `-${elapsed}ms` }}
-              />
-
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                key={`blur-${featured.id}`}
-                className={styles.featuredBlur}
-                src={`/api/img/${featured.id}`}
-                alt=""
-                aria-hidden
-              />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                key={`img-${featured.id}`}
-                className={styles.featuredImg}
-                src={`/api/img/${featured.id}`}
-                alt={featured.name}
-              />
-              <div className={styles.featuredScrim} />
-
-              <div className={styles.hudTopLeft}>
-                SYS.WARP.ACTIVE // {featured.id.slice(0, 4).toUpperCase()}
-              </div>
-              <div className={styles.hudBars}>
-                <span style={{ height: "40%", opacity: 0.4 }} />
-                <span style={{ height: "80%", opacity: 0.8 }} />
-                <span style={{ height: "55%", opacity: 0.6 }} />
-              </div>
-
-              <div className={styles.featuredContent}>
-                <div className={styles.profile}>
-                  <span className={styles.avatar}>
-                    <InstagramIcon className={styles.avatarIcon} />
-                  </span>
-                  <div>
-                    <div className={styles.profileName}>{featured.name}</div>
-                    <div className={styles.profileMeta}>เพิ่งส่งขึ้นจอ</div>
-                  </div>
+              <div className={styles.profile}>
+                <span className={styles.avatar}>
+                  <InstagramIcon className={styles.avatarIcon} />
+                </span>
+                <div>
+                  <div className={styles.profileName}>{featured.name}</div>
+                  <div className={styles.profileMeta}>เพิ่งส่งขึ้นจอ</div>
                 </div>
-                {featured.msg && (
-                  <h2 className={styles.message}>{featured.msg}</h2>
-                )}
               </div>
+              {featured.msg ? (
+                <h2 className={styles.message}>{featured.msg}</h2>
+              ) : (
+                <h2 className={styles.messageMuted}>ส่งรูปขึ้นจอ 🎉</h2>
+              )}
             </>
           ) : (
-            <div className={styles.featuredEmpty}>
-              <BoltIcon className={styles.emptyBolt} />
-              <div className={styles.emptyTitle}>รอรูปขึ้นจอ</div>
-              <div className={styles.emptySub}>สแกน QR ด้านขวาเพื่อส่งรูป</div>
+            <div className={styles.captionIdle}>
+              รอรูปจากลูกค้า — สแกน QR ด้านล่างเพื่อส่งรูปขึ้นจอ
             </div>
           )}
         </div>
-      </div>
 
-      {/* ── Right: sidebar ──────────────────────────────────────────────── */}
-      <aside className={styles.sidebar}>
-        <div className={styles.qrSection}>
-          <div className={styles.qrBlob} aria-hidden />
-          <h3 className={styles.qrTitle}>OPEN A WARP</h3>
-          <p className={styles.qrSub}>สแกนเพื่อส่งรูปขึ้นจอ</p>
+        <div className={styles.warpRow}>
           <div className={styles.qrPlate}>
             {qr && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -199,29 +201,18 @@ export default function TvWall() {
             )}
             <span className={styles.qrScan} aria-hidden />
           </div>
-          <div className={styles.qrCaption}>
-            <span>สแกนเพื่อส่งรูปขึ้นจอ</span>
-          </div>
-        </div>
-
-        <div className={styles.sidebarFill}>
-          {queueLen > 0 && (
-            <div className={styles.queuePanel}>
-              <div className={styles.queueNum}>{queueLen}</div>
-              <div className={styles.queueLabel}>รูปกำลังรอขึ้นจอ</div>
+          <div className={styles.warpText}>
+            <div className={styles.warpTitle}>OPEN A WARP</div>
+            <div className={styles.warpSub}>สแกนเพื่อส่งรูปขึ้นจอ</div>
+            <div className={styles.warpStats}>
+              <span className={styles.statValueCyan}>{photos.length}</span>
+              <span className={styles.statLabel}>รูปทั้งหมด</span>
+              <Link href="/tv/slideshow" className={styles.slideLink}>
+                <SlideshowIcon className={styles.slideIcon} />
+                สไลด์โชว์
+              </Link>
             </div>
-          )}
-        </div>
-
-        <div className={styles.statsBar}>
-          <div className={styles.stat}>
-            <div className={styles.statLabel}>รูปทั้งหมด</div>
-            <div className={styles.statValueCyan}>{photos.length}</div>
           </div>
-          <Link href="/tv/slideshow" className={styles.slideLink}>
-            <SlideshowIcon className={styles.slideIcon} />
-            สไลด์โชว์
-          </Link>
         </div>
       </aside>
     </div>
