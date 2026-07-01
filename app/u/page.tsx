@@ -130,6 +130,7 @@ export default function UploadPage() {
 
   return (
     <main className={styles.screen}>
+      <div className="scanlines" aria-hidden />
       <input ref={cameraRef} type="file" accept="image/*" capture="environment"
         className={styles.hidden} onChange={onPick} aria-hidden="true" tabIndex={-1} />
       <input ref={galleryRef} type="file" accept="image/*"
@@ -150,9 +151,20 @@ export default function UploadPage() {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={previewUrl} alt="ตัวอย่างรูปที่จะส่ง" />
         ) : (
-          <span className={styles.previewEmpty}>
-            <PhotoIcon />
-            <span>แตะเพื่อเลือกรูป</span>
+          <span className={styles.uplink}>
+            <span className={styles.scanBeam} aria-hidden />
+            <span className={styles.uplinkIcon}>
+              <span className={`${styles.cornerAccent} ${styles.cornerTL}`} />
+              <span className={`${styles.cornerAccent} ${styles.cornerBR}`} />
+              <PhotoIcon />
+            </span>
+            <span className={styles.uplinkTitle}>แตะเพื่อส่งรูป</span>
+            <span className={styles.uplinkMeta}>รองรับ JPG, PNG • สูงสุด 10MB</span>
+            <span className={styles.uplinkDots}>
+              <span style={{ opacity: 0.5 }} />
+              <span style={{ opacity: 0.3 }} />
+              <span style={{ opacity: 0.1 }} />
+            </span>
           </span>
         )}
       </button>
@@ -182,7 +194,7 @@ export default function UploadPage() {
           {CAPTIONS.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
-          <option value="__custom__">✏️ พิมพ์เอง...</option>
+          <option value="__custom__">+ พิมพ์เอง...</option>
         </select>
         {captionSel === "__custom__" && (
           <input className={`${styles.input} ${styles.customInput}`}

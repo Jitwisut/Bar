@@ -1,68 +1,101 @@
 "use client";
 
 import Link from "next/link";
-import { useUploadQr } from "@/lib/useUploadQr";
-import { MonitorIcon, SlideshowIcon, CameraIcon } from "@/components/icons";
+import {
+  MonitorIcon,
+  CameraIcon,
+  BoltIcon,
+  QrIcon,
+  VerifiedIcon,
+} from "@/components/icons";
 import styles from "./page.module.css";
 
 export default function Home() {
-  const { src, url } = useUploadQr();
-
   return (
-    <main className={styles.wrap}>
-      <div className={styles.grid}>
-        <div>
-          <div className={styles.brand}>
-            <span className={styles.brandDot} />
-            NEON BAR
-          </div>
+    <div className={styles.page}>
+      {/* Top nav */}
+      <header className={styles.nav}>
+        <div className={styles.navInner}>
+          <div className={styles.logo}>Electric Social</div>
+        </div>
+      </header>
 
-          <h1 className={styles.title}>ส่งรูปขึ้นจอทีวีที่ร้าน แบบเรียลไทม์</h1>
-          <p className={styles.tag}>
-            ลูกค้าสแกน QR แล้วส่งรูปขึ้นจอได้ทันที ไม่ต้องโหลดแอป
+      <main className={styles.main}>
+        <div className="scanlines" aria-hidden />
+
+        {/* Hero */}
+        <section className={styles.hero}>
+          <h1 className={styles.title}>
+            เปลี่ยนงานของคุณให้มีชีวิต
+            <br />
+            <span className={styles.titleAccent}>แบบเรียลไทม์</span>
+          </h1>
+          <p className={styles.subtitle}>
+            ระบบแสดงรูปบนจอสำหรับร้านอาหาร บาร์ และงานอีเวนต์ —
+            ให้ลูกค้าแชร์บรรยากาศขึ้นจอได้ทันที ร้านของคุณก็มีชีวิตชีวาด้วยรูปจากทุกคน
           </p>
+        </section>
 
-          <div className={styles.steps}>
-            <div className={styles.step}>
-              <span className={styles.stepn}>1</span>สแกน QR ด้วยมือถือ
-            </div>
-            <div className={styles.step}>
-              <span className={styles.stepn}>2</span>เลือกหรือถ่ายรูป ใส่ชื่อ
-            </div>
-            <div className={styles.step}>
-              <span className={styles.stepn}>3</span>รูปขึ้นจอทีวีทันที
-            </div>
-          </div>
-
-          <div className={styles.actions}>
-            <Link href="/tv" className={`${styles.btn} ${styles.primary}`}>
+        {/* CTA cards */}
+        <div className={styles.cards}>
+          <div className={`${styles.card} ${styles.cyan}`}>
+            <div className={`${styles.cardIcon} ${styles.cyan}`}>
               <MonitorIcon />
-              เปิดจอกำแพงรูป
+            </div>
+            <h2 className={styles.cardTitle}>เปิดจอทีวี</h2>
+            <p className={styles.cardDesc}>
+              เปิดกำแพงรูปแบบ cinematic สำหรับจอใหญ่
+              อัปเดตรูปลูกค้าสด ๆ ตลอดเวลา ให้บรรยากาศในร้านคึกคักไม่มีสะดุด
+            </p>
+            <Link href="/tv" className={`${styles.cardBtn} ${styles.cyan}`}>
+              เปิดโหมดจอใหญ่
             </Link>
-            <Link href="/tv/slideshow" className={styles.btn}>
-              <SlideshowIcon />
-              สไลด์โชว์
-            </Link>
-            <Link href="/u" className={styles.btn}>
+          </div>
+
+          <div className={`${styles.card} ${styles.magenta}`}>
+            <div className={`${styles.cardIcon} ${styles.magenta}`}>
               <CameraIcon />
-              หน้าส่งรูป
+            </div>
+            <h2 className={styles.cardTitle}>ส่งรูปขึ้นจอ</h2>
+            <p className={styles.cardDesc}>
+              หน้าสำหรับลูกค้าแชร์รูป แค่สแกน QR ถ่ายหรือเลือกรูป
+              แล้วดูรูปขึ้นจอหลักภายในไม่กี่วินาที
+            </p>
+            <Link href="/u" className={`${styles.cardBtn} ${styles.magenta}`}>
+              เริ่มส่งรูปเลย
             </Link>
           </div>
         </div>
 
-        <div className={styles.card}>
-          <div className={styles.qrPlate}>
-            {src ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={src} alt="QR สำหรับส่งรูปขึ้นจอ" width={200} height={200} />
-            ) : (
-              <div style={{ width: 200, height: 200 }} />
-            )}
+        {/* Feature chips */}
+        <div className={styles.features}>
+          <div className={styles.feature}>
+            <BoltIcon />
+            <span>ขึ้นจอทันที</span>
           </div>
-          <div className={styles.cardLabel}>สแกนเพื่อส่งรูป</div>
-          <div className={styles.cardUrl}>{url}</div>
+          <div className={styles.feature}>
+            <QrIcon />
+            <span>ไม่ต้องโหลดแอป</span>
+          </div>
+          <div className={styles.feature}>
+            <VerifiedIcon />
+            <span>ปลอดภัย ดูแลรูป</span>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+
+      <footer className={styles.footer}>
+        <div className={styles.footerInner}>
+          <div className={styles.footerBrand}>Electric Social</div>
+          <div className={styles.footerLinks}>
+            <a href="#">เงื่อนไข</a>
+            <a href="#">ความเป็นส่วนตัว</a>
+            <a href="#">ติดต่อ</a>
+            <a href="#">ร้านค้า</a>
+          </div>
+          <div className={styles.footerCopy}>© 2026 Electric Social</div>
+        </div>
+      </footer>
+    </div>
   );
 }

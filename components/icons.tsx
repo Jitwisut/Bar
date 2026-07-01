@@ -1,5 +1,46 @@
 type IconProps = { className?: string };
 
+export function BoltIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M13 2L4.5 13.5H11l-1 8.5L19.5 10H13z" />
+    </svg>
+  );
+}
+
+export function QrIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M14 14h3v3M21 14v.01M14 21h.01M17 21h4v-4" />
+    </svg>
+  );
+}
+
+export function VerifiedIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2l2.4 1.8 3 .2.9 2.8 2.2 2-.8 2.9.8 2.9-2.2 2-.9 2.8-3 .2L12 22l-2.4-1.8-3-.2-.9-2.8-2.2-2 .8-2.9-.8-2.9 2.2-2 .9-2.8 3-.2z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+export function HistoryIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v5h5" />
+      <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
 export function InstagramIcon({ className }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"

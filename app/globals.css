@@ -1,18 +1,22 @@
 :root {
-  /* Electric Violet — flat, no gradients */
-  --bg: #0a0a12;
-  --surface: #15131f;
-  --surface-2: #211d31;
-  --accent: #7c5cfc;
-  --accent-press: #6b4af0;
-  --accent-2: #ff4d8d;
-  --text: #ececf5;
-  --muted: #9a97ad;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --surface-hover: #2a2540;
-  --radius: 14px;
-  --radius-lg: 20px;
+  /* Cyberpunk — neon cyan + magenta on near-black, angular */
+  --bg: #050507;
+  --surface: #0d0e13;
+  --surface-2: #16171d;
+  --surface-hover: #1c1d25;
+  --accent: #00f0ff; /* cyan */
+  --accent-press: #00dbe9;
+  --accent-2: #ff24e4; /* magenta */
+  --text: #e3e1e9;
+  --muted: #b9cacb;
+  --border: rgba(0, 240, 255, 0.25);
+  --border-strong: rgba(0, 240, 255, 0.55);
+  --radius: 2px;
+  --radius-lg: 4px;
+
+  --glow-cyan: 0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.2);
+  --glow-magenta: 0 0 20px rgba(255, 36, 228, 0.5), inset 0 0 10px rgba(255, 36, 228, 0.3);
+  --clip-cyber: polygon(0 0, 95% 0, 100% 5%, 100% 100%, 5% 100%, 0 95%);
 
   --font-ui: var(--font-manrope), system-ui, sans-serif;
   --font-display: var(--font-space-grotesk), system-ui, sans-serif;
@@ -48,9 +52,38 @@ button {
   outline-offset: 2px;
 }
 
-/* Accent wordmark — flat, no glow */
+/* Accent wordmark — neon cyan glow */
 .accA {
   color: var(--accent);
+  text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+}
+
+/* Cyberpunk helpers shared across pages */
+.cyberPanel {
+  background: rgba(5, 5, 7, 0.85);
+  backdrop-filter: blur(12px);
+  border: 2px solid var(--accent);
+  box-shadow: var(--glow-cyan);
+  clip-path: var(--clip-cyber);
+}
+
+.scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(0, 240, 255, 0.05) 51%,
+    transparent 51%
+  );
+  background-size: 100% 4px;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
 }
 
 @keyframes pulse {
