@@ -9,13 +9,13 @@ import type { Photo } from "@/lib/client";
 import { BoltIcon, InstagramIcon, SlideshowIcon } from "@/components/icons";
 import styles from "./tv.module.css";
 
-const STORE_KEY = "tv_featured_v1"; // persists { id, at } across refresh
+const DELETE_AFTER_DISPLAY_SEC = 5 * 60;
 
-function markDisplayed(id: string) {
+function markDisplayed(id: string, deleteAfterSec?: number) {
   fetch("/api/photos/displayed", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id }),
+    body: JSON.stringify({ id, deleteAfterSec }),
   }).catch(() => {});
 }
 
@@ -29,71 +29,43 @@ export default function TvWall() {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [queue, setQueue] = useState<string[]>([]);
-  const [restored, setRestored] = useState(false);
   const seenIds = useRef<Set<string>>(new Set());
   const seededRef = useRef(false);
+  const mountedAtRef = useRef(Date.now());
 
   useEffect(() => {
     makeQrDataUrl(uploadUrl()).then(setQr).catch(() => {});
   }, []);
 
-  // 0. On mount: restore the in-progress photo + its start time (survives refresh)
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORE_KEY);
-      if (raw) {
-        const { id, at } = JSON.parse(raw) as { id: string; at: number };
-        if (id && at && Date.now() - at < SHOW_MS) {
-          setCurrentId(id);
-          setStartedAt(at);
-        } else {
-          localStorage.removeItem(STORE_KEY);
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-    setRestored(true);
-  }, []);
-
-  // Persist the current photo + start time whenever they change
-  useEffect(() => {
-    try {
-      if (currentId && startedAt) {
-        localStorage.setItem(STORE_KEY, JSON.stringify({ id: currentId, at: startedAt }));
-      } else {
-        localStorage.removeItem(STORE_KEY);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [currentId, startedAt, SHOW_MS]);
-
   // 1. Enqueue new arrivals (FIFO, oldest first). On the first pass after a
   //    refresh, mark existing photos as already-seen so we don't replay them.
   useEffect(() => {
-    if (!restored) return;
     if (!seededRef.current) {
+      if (status !== "live") return;
+      const fresh = photos.filter((p) => p.ts > mountedAtRef.current);
       photos.forEach((p) => seenIds.current.add(p.id));
       seededRef.current = true;
+      if (fresh.length > 0) {
+        setQueue((q) => [...q, ...fresh.map((p) => p.id).reverse()]);
+      }
       return;
     }
     const fresh = photos.filter((p) => !seenIds.current.has(p.id));
     if (fresh.length === 0) return;
     fresh.forEach((p) => seenIds.current.add(p.id));
     setQueue((q) => [...q, ...fresh.map((p) => p.id).reverse()]);
-  }, [photos, restored]);
+  }, [photos, status]);
 
   // 2. Dequeue when the screen is idle → stamp a fresh start time
   useEffect(() => {
-    if (!restored) return;
     if (currentId !== null) return;
     if (queue.length === 0) return;
     const [next, ...rest] = queue;
     setCurrentId(next);
     setStartedAt(Date.now());
     setQueue(rest);
-  }, [currentId, queue, restored]);
+    markDisplayed(next, Math.ceil(SHOW_MS / 1000) + DELETE_AFTER_DISPLAY_SEC);
+  }, [currentId, queue, SHOW_MS]);
 
   // 3. Auto-advance: hide after the *remaining* time → triggers next dequeue
   useEffect(() => {

@@ -9,16 +9,18 @@ import { ArrowLeftIcon, InstagramIcon } from "@/components/icons";
 import type { Photo } from "@/lib/client";
 import styles from "./slideshow.module.css";
 
-function markDisplayed(id: string) {
+const DELETE_AFTER_DISPLAY_SEC = 5 * 60;
+
+function markDisplayed(id: string, deleteAfterSec?: number) {
   fetch("/api/photos/displayed", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id }),
+    body: JSON.stringify({ id, deleteAfterSec }),
   }).catch(() => {});
 }
 
 export default function Slideshow() {
-  const { photos } = usePhotos();
+  const { photos, status } = usePhotos();
   const { src: qr } = useUploadQr();
   const { settings } = useSettings();
   const SHOW_MS = settings.slideshowDurationSec * 1000;
@@ -29,15 +31,28 @@ export default function Slideshow() {
   const [queue, setQueue] = useState<string[]>([]);
   // set of ids we've already enqueued or shown — prevents re-adding on each poll
   const seenIds = useRef<Set<string>>(new Set());
+  const seededRef = useRef(false);
+  const mountedAtRef = useRef(Date.now());
 
   // ── 1. Enqueue new arrivals ──────────────────────────────────────────────
   useEffect(() => {
+    if (!seededRef.current) {
+      if (status !== "live") return;
+      const fresh = photos.filter((p) => p.ts > mountedAtRef.current);
+      photos.forEach((p) => seenIds.current.add(p.id));
+      seededRef.current = true;
+      if (fresh.length > 0) {
+        setQueue((q) => [...q, ...fresh.map((p) => p.id).reverse()]);
+      }
+      return;
+    }
+
     const fresh = photos.filter((p) => !seenIds.current.has(p.id));
     if (fresh.length === 0) return;
     fresh.forEach((p) => seenIds.current.add(p.id));
     // newest-first from usePhotos, so reverse to queue oldest-first (FIFO)
     setQueue((q) => [...q, ...fresh.map((p) => p.id).reverse()]);
-  }, [photos]);
+  }, [photos, status]);
 
   // ── 2. Dequeue when screen is idle ───────────────────────────────────────
   useEffect(() => {
@@ -46,7 +61,8 @@ export default function Slideshow() {
     const [next, ...rest] = queue;
     setCurrentId(next);
     setQueue(rest);
-  }, [currentId, queue]);
+    markDisplayed(next, Math.ceil(SHOW_MS / 1000) + DELETE_AFTER_DISPLAY_SEC);
+  }, [currentId, queue, SHOW_MS]);
 
   // ── 3. Auto-advance: hide after SHOW_MS → triggers dequeue effect ────────
   useEffect(() => {

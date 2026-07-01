@@ -241,13 +241,24 @@ export async function approvePhoto(id: string): Promise<boolean> {
   }).done;
 }
 
-/** Mark a shown photo as done; it will be deleted after PHOTO_DISPLAY_DELETE_SEC. */
-export async function markPhotoDisplayed(id: string): Promise<boolean> {
+function clampDeleteAfterSec(value: unknown) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return DISPLAY_DELETE_SEC;
+  return Math.min(24 * 60 * 60, Math.max(30, Math.round(n)));
+}
+
+/** Mark a shown photo as done; it will be deleted after the requested delay. */
+export async function markPhotoDisplayed(
+  id: string,
+  deleteAfterSec: unknown = DISPLAY_DELETE_SEC
+): Promise<boolean> {
+  const ttl = clampDeleteAfterSec(deleteAfterSec);
+
   if (hasRedis()) {
     const removed = await redisCommand<number>(["ZREM", approvedKey, id]);
     await Promise.all([
-      redisCommand(["EXPIRE", metaKey(id), DISPLAY_DELETE_SEC]),
-      redisCommand(["EXPIRE", imageKey(id), DISPLAY_DELETE_SEC]),
+      redisCommand(["EXPIRE", metaKey(id), ttl]),
+      redisCommand(["EXPIRE", imageKey(id), ttl]),
     ]);
     return (removed ?? 0) > 0;
   }
@@ -258,7 +269,7 @@ export async function markPhotoDisplayed(id: string): Promise<boolean> {
     const idx = s.photos.findIndex((p) => p.id === id);
     if (idx !== -1) s.photos.splice(idx, 1);
     s.buffers.delete(id);
-  }, DISPLAY_DELETE_SEC * 1000);
+  }, ttl * 1000);
   return true;
 }
 
