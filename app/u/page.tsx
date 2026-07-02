@@ -17,7 +17,7 @@ type Phase = "idle" | "sending" | "paying" | "done";
 export default function UploadPage() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
-  const { settings } = useSettings();
+  const { settings, loaded } = useSettings();
   const pay = settings.payment;
 
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -107,6 +107,23 @@ export default function UploadPage() {
 
   const sending = phase === "sending";
 
+  // Owner turned uploads off (bar closed / event over)
+  if (loaded && settings.uploadsPaused) {
+    return (
+      <main className={styles.screen}>
+        <div className="scanlines" aria-hidden />
+        <div className={styles.header}>
+          <span className={styles.brandDot} />
+          {settings.brandName}
+        </div>
+        <h1 className={styles.title}>ปิดรับรูปชั่วคราว</h1>
+        <p className={styles.sub}>
+          ตอนนี้ร้านยังไม่เปิดรับรูปขึ้นจอ ลองสแกนใหม่อีกครั้งภายหลังนะ
+        </p>
+      </main>
+    );
+  }
+
   // Payment screen — PromptPay QR + amount, waiting for "จ่ายแล้ว"
   if (phase === "paying") {
     return (
@@ -156,7 +173,9 @@ export default function UploadPage() {
         </div>
         <div className={styles.successSub}>
           {needsApproval
-            ? "รูปของคุณส่งแล้ว รอพนักงานยืนยันการชำระเงินก่อนขึ้นจอ"
+            ? pay.enabled
+              ? "รูปของคุณส่งแล้ว รอพนักงานยืนยันการชำระเงินก่อนขึ้นจอ"
+              : "รูปของคุณส่งแล้ว รอพนักงานตรวจสอบก่อนขึ้นจอสักครู่นะ"
             : queuedAhead > 0
               ? `มีคนส่งพร้อมกัน ${queuedAhead} คน รูปของคุณเข้าคิวแล้วและกำลังขึ้นจอ`
               : "รูปของคุณกำลังขึ้นจอทีวีที่ร้าน มองหาบนกำแพงรูปได้เลย"}

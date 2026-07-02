@@ -4,10 +4,21 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { PublicSettings } from "@/lib/settings";
 import type { Photo } from "@/lib/client";
+import { useUploadQr } from "@/lib/useUploadQr";
 import { BoltIcon, MonitorIcon, CameraIcon } from "@/components/icons";
 import styles from "./admin.module.css";
 
-type Tab = "brand" | "timing" | "captions" | "payment" | "approve" | "pin";
+type Tab =
+  | "brand"
+  | "timing"
+  | "captions"
+  | "payment"
+  | "live"
+  | "approve"
+  | "qr"
+  | "pin";
+
+type TodayStats = { uploads: number; approved: number };
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -124,6 +135,8 @@ const emptyDraft: PublicSettings = {
   maxUploadMB: 15,
   captions: [],
   payment: { enabled: false, amountBaht: 20, promptPayId: "", requireApproval: true },
+  uploadsPaused: false,
+  moderateAll: false,
 };
 
 function Dashboard({ onLogout }: { onLogout: () => void }) {
@@ -133,6 +146,10 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [pending, setPending] = useState<Photo[]>([]);
+  const [live, setLive] = useState<Photo[]>([]);
+  const [stats, setStats] = useState<TodayStats>({ uploads: 0, approved: 0 });
+  const [serverOffsetMs, setServerOffsetMs] = useState(0);
+  const { src: qrSrc, url: qrUrl } = useUploadQr();
 
   // Load editable settings
   useEffect(() => {
@@ -142,19 +159,24 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       .catch(() => {});
   }, []);
 
-  const loadPending = useCallback(() => {
+  const loadPhotos = useCallback(() => {
     fetch("/api/admin/photos", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => setPending(d?.pending ?? []))
+      .then((d) => {
+        setPending(d?.pending ?? []);
+        setLive(d?.live ?? []);
+        if (d?.stats) setStats(d.stats);
+        if (d?.serverNow) setServerOffsetMs(d.serverNow - Date.now());
+      })
       .catch(() => {});
   }, []);
 
-  // Poll pending queue while on the approve tab
+  // Poll pending queue + live wall + counters
   useEffect(() => {
-    loadPending();
-    const t = setInterval(loadPending, 4000);
+    loadPhotos();
+    const t = setInterval(loadPhotos, 4000);
     return () => clearInterval(t);
-  }, [loadPending]);
+  }, [loadPhotos]);
 
   const set = <K extends keyof PublicSettings>(k: K, v: PublicSettings[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
@@ -196,14 +218,29 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     onLogout();
   }
 
-  async function act(id: string, action: "approve" | "reject") {
+  async function act(id: string, action: "approve" | "reject" | "delete") {
     setPending((p) => p.filter((x) => x.id !== id));
+    if (action === "delete") setLive((p) => p.filter((x) => x.id !== id));
     await fetch("/api/admin/photos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, action }),
     });
-    loadPending();
+    loadPhotos();
+  }
+
+  async function clearWall() {
+    if (!window.confirm("ล้างกำแพงรูปทั้งหมด? รูปทุกใบ (รวมคิวรออนุมัติ) จะถูกลบถาวร")) {
+      return;
+    }
+    setLive([]);
+    setPending([]);
+    await fetch("/api/admin/photos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "clear" }),
+    });
+    loadPhotos();
   }
 
   const paymentActive = draft.payment.enabled && draft.payment.requireApproval;
@@ -230,14 +267,43 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         </Link>
       </div>
 
+      <div className={styles.statsBar}>
+        <div className={styles.statCard}>
+          <div className={styles.statNum}>{stats.uploads}</div>
+          <div className={styles.statLbl}>รูปที่ส่งเข้ามาวันนี้</div>
+        </div>
+        <div className={styles.statCard}>
+          <div className={styles.statNum}>{live.length}</div>
+          <div className={styles.statLbl}>บนจอ / รอคิว</div>
+        </div>
+        <div className={styles.statCard}>
+          <div className={`${styles.statNum} ${styles.pink}`}>{pending.length}</div>
+          <div className={styles.statLbl}>รออนุมัติ</div>
+        </div>
+        {draft.payment.enabled && (
+          <div className={styles.statCard}>
+            <div className={styles.statNum}>
+              ฿{(stats.approved * draft.payment.amountBaht).toLocaleString()}
+            </div>
+            <div className={styles.statLbl}>
+              รายได้วันนี้ (ประมาณ · {stats.approved} รูป)
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className={styles.tabs}>
         <TabBtn id="brand" tab={tab} setTab={setTab}>แบรนด์ & ข้อความ</TabBtn>
-        <TabBtn id="timing" tab={tab} setTab={setTab}>เวลา & คิว</TabBtn>
+        <TabBtn id="timing" tab={tab} setTab={setTab}>เวลา & การรับรูป</TabBtn>
         <TabBtn id="captions" tab={tab} setTab={setTab}>แคปชั่น</TabBtn>
         <TabBtn id="payment" tab={tab} setTab={setTab}>ค่าโพสต์รูป</TabBtn>
+        <TabBtn id="live" tab={tab} setTab={setTab} badge={live.length}>
+          รูปบนจอ
+        </TabBtn>
         <TabBtn id="approve" tab={tab} setTab={setTab} badge={pending.length}>
           คิวอนุมัติ
         </TabBtn>
+        <TabBtn id="qr" tab={tab} setTab={setTab}>QR</TabBtn>
         <TabBtn id="pin" tab={tab} setTab={setTab}>PIN</TabBtn>
       </div>
 
@@ -273,6 +339,24 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             <Num label="ความยาวแคปชั่นสูงสุด" value={draft.msgMaxLen} unit="ตัวอักษร" onChange={(v) => set("msgMaxLen", v)} />
           </div>
           <Num label="ขนาดไฟล์รูปสูงสุด" value={draft.maxUploadMB} unit="MB" onChange={(v) => set("maxUploadMB", v)} />
+
+          <h2 className={styles.cardTitle} style={{ marginTop: 28 }}>การรับรูปจากลูกค้า</h2>
+          <Toggle
+            label="ปิดรับรูปชั่วคราว"
+            hint={
+              draft.uploadsPaused
+                ? "กำลังปิดรับ — ลูกค้าที่สแกน QR จะเห็นข้อความว่าปิดรับรูปแล้ว"
+                : "เปิดรับรูปตามปกติ — เปิดสวิตช์นี้ตอนร้านปิดหรือจบอีเวนต์"
+            }
+            on={draft.uploadsPaused}
+            onToggle={() => set("uploadsPaused", !draft.uploadsPaused)}
+          />
+          <Toggle
+            label="ตรวจทุกรูปก่อนขึ้นจอ"
+            hint="รูปทุกใบ (แม้โพสต์ฟรี) ต้องให้พนักงานอนุมัติในแท็บคิวอนุมัติก่อนขึ้นจอ — กันรูปไม่เหมาะสม"
+            on={draft.moderateAll}
+            onToggle={() => set("moderateAll", !draft.moderateAll)}
+          />
         </div>
       )}
 
@@ -350,6 +434,86 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         </div>
       )}
 
+      {tab === "live" && (
+        <div className={styles.card}>
+          <h2 className={styles.cardTitle}>รูปบนจอ / รอคิว ({live.length})</h2>
+          <p className={styles.cardHint}>
+            รูปที่กำลังแสดงและรอคิวขึ้นจอ — กดลบเพื่อเอารูปออกทันที (เช่น รูปไม่เหมาะสม)
+          </p>
+          {live.length === 0 ? (
+            <div className={styles.pendEmpty}>ยังไม่มีรูปบนจอ</div>
+          ) : (
+            <div className={styles.pendGrid}>
+              {live.map((p) => {
+                const now = Date.now() + serverOffsetMs;
+                const showing = Boolean(
+                  p.displayStartedAt &&
+                    p.displayStartedAt <= now &&
+                    p.displayUntil &&
+                    p.displayUntil > now
+                );
+                return (
+                  <div key={p.id} className={`${styles.pendCard} ${styles.liveCard}`}>
+                    {showing ? (
+                      <span className={styles.liveNow}>กำลังแสดง</span>
+                    ) : (
+                      <span className={styles.queuedTag}>
+                        {p.displayStartedAt ? "แสดงแล้ว" : "รอคิว"}
+                      </span>
+                    )}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img className={styles.pendImg} src={`/api/img/${p.id}`} alt={p.name} />
+                    <div className={styles.pendMeta}>
+                      <div className={styles.pendName}>{p.name}</div>
+                      {p.msg && <div className={styles.pendMsg}>{p.msg}</div>}
+                    </div>
+                    <div className={styles.pendBtns}>
+                      <button className={styles.pendReject} onClick={() => act(p.id, "delete")}>
+                        ลบออกจากจอ
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className={styles.clearRow}>
+            <button className={styles.dangerBtn} onClick={clearWall}>
+              ล้างกำแพงรูปทั้งหมด
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab === "qr" && (
+        <div className={styles.card}>
+          <h2 className={styles.cardTitle}>QR หน้าส่งรูปสำหรับพิมพ์</h2>
+          <p className={styles.cardHint}>
+            ดาวน์โหลดไปพิมพ์แปะโต๊ะ/เมนู ลูกค้าสแกนแล้วเข้าหน้าส่งรูปได้เลย ไม่ต้องพึ่งจอทีวี
+          </p>
+          <div className={styles.qrWrap}>
+            {qrSrc && (
+              <div className={styles.qrBig}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrSrc} alt="QR หน้าส่งรูป" />
+              </div>
+            )}
+            <div className={styles.qrInfo}>
+              <div className={styles.qrUrl}>{qrUrl}</div>
+              {qrSrc && (
+                <a className={styles.qrDl} href={qrSrc} download="qr-send-photo.png">
+                  ดาวน์โหลด QR (PNG)
+                </a>
+              )}
+              <p className={styles.cardHint} style={{ marginTop: 14 }}>
+                QR ชี้ไปที่โดเมนเดียวกับหน้าแอดมินนี้ — ถ้าใช้ในวง LAN
+                ให้เปิดหน้าแอดมินผ่าน IP เครื่อง (ไม่ใช่ localhost) ก่อนดาวน์โหลด
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {tab === "approve" && (
         <div className={styles.card}>
           <h2 className={styles.cardTitle}>คิวรออนุมัติ ({pending.length})</h2>
@@ -402,7 +566,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         </div>
       )}
 
-      {tab !== "approve" && (
+      {tab !== "approve" && tab !== "live" && tab !== "qr" && (
         <div className={styles.saveBar}>
           {msg && <span className={styles.saveMsg}>{msg}</span>}
           <button className={styles.saveBtn} onClick={save} disabled={saving}>

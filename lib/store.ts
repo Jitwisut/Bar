@@ -36,6 +36,13 @@ function key(name: string) {
 }
 
 const seqKey = key("seq");
+const statsKey = (day: string, kind: "up" | "ok") => key(`stats:${kind}:${day}`);
+const STATS_TTL_SEC = 2 * 24 * 60 * 60;
+
+/** Business day in Thailand (UTC+7) as YYYY-MM-DD — servers may run in UTC. */
+function bangkokDay(now = Date.now()) {
+  return new Date(now + 7 * 3600 * 1000).toISOString().slice(0, 10);
+}
 const approvedKey = key("approved");
 const pendingKey = key("pending");
 const activeKey = key("active");
@@ -58,20 +65,65 @@ class WriteQueue {
   }
 }
 
+type DayStats = { day: string; uploads: number; approved: number };
+
 type State = {
   photos: Photo[];
   buffers: Map<string, { buf: Buffer; ext: string }>;
   seq: number;
   queue: WriteQueue;
+  stats: DayStats;
 };
 
 const g = globalThis as unknown as { __neonStore?: State };
 
 function getState(): State {
   if (!g.__neonStore) {
-    g.__neonStore = { photos: [], buffers: new Map(), seq: 0, queue: new WriteQueue() };
+    g.__neonStore = {
+      photos: [],
+      buffers: new Map(),
+      seq: 0,
+      queue: new WriteQueue(),
+      stats: { day: bangkokDay(), uploads: 0, approved: 0 },
+    };
   }
   return g.__neonStore;
+}
+
+function memoryStats(): DayStats {
+  const s = getState();
+  const day = bangkokDay();
+  if (s.stats.day !== day) s.stats = { day, uploads: 0, approved: 0 };
+  return s.stats;
+}
+
+async function bumpStat(kind: "up" | "ok") {
+  if (hasRedis()) {
+    const k = statsKey(bangkokDay(), kind);
+    await Promise.all([
+      redisCommand(["INCR", k]),
+      redisCommand(["EXPIRE", k, STATS_TTL_SEC]),
+    ]);
+    return;
+  }
+  const stats = memoryStats();
+  if (kind === "up") stats.uploads++;
+  else stats.approved++;
+}
+
+/** Today's upload/approved counters (resets at midnight Bangkok time). */
+export async function getTodayStats(): Promise<{ uploads: number; approved: number }> {
+  if (hasRedis()) {
+    const day = bangkokDay();
+    const raw = await redisCommand<Array<string | null>>([
+      "MGET",
+      statsKey(day, "up"),
+      statsKey(day, "ok"),
+    ]);
+    return { uploads: Number(raw?.[0] ?? 0), approved: Number(raw?.[1] ?? 0) };
+  }
+  const stats = memoryStats();
+  return { uploads: stats.uploads, approved: stats.approved };
 }
 
 function sanitizeExt(ext: string) {
@@ -368,6 +420,8 @@ export async function addPhoto(input: {
       redisCommand(["SETEX", metaKey(id), PHOTO_TTL_SEC, JSON.stringify(photo)]),
       redisCommand(["SETEX", imageKey(id), PHOTO_TTL_SEC, input.buffer.toString("base64")]),
       redisCommand(["ZADD", status === "pending" ? pendingKey : approvedKey, seq, id]),
+      bumpStat("up"),
+      status === "approved" ? bumpStat("ok") : Promise.resolve(),
     ]);
     return { photo, queuedAhead: 0 };
   }
@@ -388,6 +442,8 @@ export async function addPhoto(input: {
 
     s.buffers.set(id, { buf: input.buffer, ext });
     s.photos.push(photo);
+    await bumpStat("up");
+    if (photo.status === "approved") await bumpStat("ok");
     return photo;
   });
 
@@ -427,12 +483,13 @@ export async function approvePhoto(id: string): Promise<boolean> {
       redisCommand(["EXPIRE", imageKey(id), PHOTO_TTL_SEC]),
       redisCommand(["ZREM", pendingKey, id]),
       redisCommand(["ZADD", approvedKey, seq, id]),
+      bumpStat("ok"),
     ]);
     return true;
   }
 
   const s = getState();
-  return s.queue.add(async () => {
+  const ok = await s.queue.add(async () => {
     const p = s.photos.find((x) => x.id === id && x.status === "pending");
     if (!p) return false;
     p.status = "approved";
@@ -443,6 +500,8 @@ export async function approvePhoto(id: string): Promise<boolean> {
     delete p.deleteAt;
     return true;
   }).done;
+  if (ok) await bumpStat("ok");
+  return ok;
 }
 
 /** Schedule a shown photo for deletion; optionally remove it from the approved feed. */
@@ -484,6 +543,34 @@ export async function rejectPhoto(id: string): Promise<boolean> {
       redisCommand(["DEL", metaKey(id), imageKey(id)]),
     ]);
     return (removed ?? 0) > 0;
+  }
+
+  const s = getState();
+  return s.queue.add(async () => {
+    const idx = s.photos.findIndex((x) => x.id === id);
+    if (idx === -1) return false;
+    s.photos.splice(idx, 1);
+    s.buffers.delete(id);
+    return true;
+  }).done;
+}
+
+/** Remove any photo (approved or pending) — used by the admin "live wall" tab.
+ *  If it is the one currently on the TV, the active slot is freed so the next
+ *  photo starts on the following poll. */
+export async function deletePhoto(id: string): Promise<boolean> {
+  if (hasRedis()) {
+    const [fromApproved, fromPending, activeId] = await Promise.all([
+      redisCommand<number>(["ZREM", approvedKey, id]),
+      redisCommand<number>(["ZREM", pendingKey, id]),
+      redisCommand<string>(["GET", activeKey]),
+    ]);
+    await Promise.all([
+      redisCommand(["ZREM", cleanupKey, id]),
+      redisCommand(["DEL", metaKey(id), imageKey(id)]),
+      activeId === id ? redisCommand(["DEL", activeKey]) : Promise.resolve(null),
+    ]);
+    return (fromApproved ?? 0) + (fromPending ?? 0) > 0;
   }
 
   const s = getState();

@@ -7,6 +7,7 @@ import {
   getQueueDepth,
 } from "@/lib/store";
 import { getPublicSettings } from "@/lib/settings";
+import { requireAdmin } from "@/lib/adminSession";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,12 @@ export async function POST(req: NextRequest) {
   }
 
   const settings = await getPublicSettings();
+  if (settings.uploadsPaused) {
+    return NextResponse.json(
+      { error: "ตอนนี้ร้านปิดรับรูปชั่วคราว ลองใหม่อีกครั้งภายหลังนะ" },
+      { status: 403 }
+    );
+  }
   const maxBytes = settings.maxUploadMB * 1024 * 1024;
 
   const file = form.get("image");
@@ -65,9 +72,11 @@ export async function POST(req: NextRequest) {
   const name = String(form.get("name") ?? "");
   const msg = String(form.get("msg") ?? "");
 
-  // If payment is on and needs staff approval, the photo waits as "pending".
+  // The photo waits as "pending" when staff must screen it first — either the
+  // paid flow requires approval, or the owner turned on moderation for all.
   const status =
-    settings.payment.enabled && settings.payment.requireApproval
+    (settings.payment.enabled && settings.payment.requireApproval) ||
+    settings.moderateAll
       ? "pending"
       : "approved";
 
@@ -84,8 +93,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ photo, queuedAhead, status });
 }
 
-// Clear the wall (handy for resetting between events).
-export async function DELETE() {
+// Clear the wall (handy for resetting between events). Admin only.
+export async function DELETE(req: NextRequest) {
+  if (!requireAdmin(req)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   await clearPhotos();
   return NextResponse.json({ ok: true });
 }

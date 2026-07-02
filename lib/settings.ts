@@ -25,6 +25,8 @@ export type PublicSettings = {
   maxUploadMB: number;
   captions: string[];
   payment: PaymentSettings;
+  uploadsPaused: boolean; // true = stop accepting new photos (bar closed)
+  moderateAll: boolean; // true = staff approves every photo, even free ones
 };
 
 /** Full record persisted to disk — includes the secret PIN hash. */
@@ -109,6 +111,8 @@ const DEFAULTS: StoredSettings = {
     promptPayId: "",
     requireApproval: true,
   },
+  uploadsPaused: false,
+  moderateAll: false,
   pinHash: null,
   pinSalt: null,
 };
@@ -261,6 +265,8 @@ export async function savePublicSettings(
         .map((c) => String(c).trim().slice(0, 160))
         .filter(Boolean)
         .slice(0, 200);
+    if (typeof patch.uploadsPaused === "boolean") d.uploadsPaused = patch.uploadsPaused;
+    if (typeof patch.moderateAll === "boolean") d.moderateAll = patch.moderateAll;
     if (patch.payment) {
       const p = patch.payment;
       if (typeof p.enabled === "boolean") d.payment.enabled = p.enabled;

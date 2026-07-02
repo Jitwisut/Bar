@@ -19,6 +19,8 @@ export const CLIENT_DEFAULTS: PublicSettings = {
   maxUploadMB: 15,
   captions: [],
   payment: { enabled: false, amountBaht: 20, promptPayId: "", requireApproval: true },
+  uploadsPaused: false,
+  moderateAll: false,
 };
 
 export function useSettings() {
