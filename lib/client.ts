@@ -29,7 +29,7 @@ export async function makeQrDataUrl(data: string): Promise<string> {
   return QRCode.toDataURL(data, {
     margin: 1,
     width: 480,
-    color: { dark: "#15132bff", light: "#ffffffff" },
+    color: { dark: "#111315ff", light: "#ffffffff" },
   });
 }
 

@@ -1,25 +1,26 @@
 :root {
-  /* Cyberpunk — neon cyan + magenta on near-black, angular */
-  --bg: #050507;
-  --surface: #0d0e13;
-  --surface-2: #16171d;
-  --surface-hover: #1c1d25;
-  --accent: #00f0ff; /* cyan */
-  --accent-press: #00dbe9;
-  --accent-2: #ff24e4; /* magenta */
-  --text: #e3e1e9;
-  --muted: #b9cacb;
-  --border: rgba(0, 240, 255, 0.25);
-  --border-strong: rgba(0, 240, 255, 0.55);
-  --radius: 2px;
-  --radius-lg: 4px;
+  /* Dark minimal — near-black surfaces, warm amber accent, soft corners */
+  --bg: #111315;
+  --surface: #1b1e21;
+  --surface-2: #22262a;
+  --surface-hover: #292e33;
+  --accent: #e8a33d; /* warm amber */
+  --accent-press: #d4922f;
+  --accent-2: #e5484d; /* soft red — destructive / attention */
+  --text: #f5f6f7;
+  --muted: #9ba1a6;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --radius: 10px;
+  --radius-lg: 16px;
 
-  --glow-cyan: 0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.2);
-  --glow-magenta: 0 0 20px rgba(255, 36, 228, 0.5), inset 0 0 10px rgba(255, 36, 228, 0.3);
-  --clip-cyber: polygon(0 0, 95% 0, 100% 5%, 100% 100%, 5% 100%, 0 95%);
+  /* Legacy effect tokens — kept as soft shadows so old references stay subtle */
+  --glow-cyan: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --glow-magenta: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --clip-cyber: none;
 
-  --font-ui: var(--font-manrope), system-ui, sans-serif;
-  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-ui: var(--font-sans), system-ui, sans-serif;
+  --font-display: var(--font-sans), system-ui, sans-serif;
 }
 
 * {
@@ -52,33 +53,21 @@ button {
   outline-offset: 2px;
 }
 
-/* Accent wordmark — neon cyan glow */
+/* Accent wordmark — flat accent colour, no glow */
 .accA {
   color: var(--accent);
-  text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
 }
 
-/* Cyberpunk helpers shared across pages */
+/* Shared panel — minimal card */
 .cyberPanel {
-  background: rgba(5, 5, 7, 0.85);
-  backdrop-filter: blur(12px);
-  border: 2px solid var(--accent);
-  box-shadow: var(--glow-cyan);
-  clip-path: var(--clip-cyber);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
 }
 
+/* Retired retro overlay — markup still renders it, keep it invisible */
 .scanlines {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 100;
-  background: linear-gradient(
-    to bottom,
-    transparent 50%,
-    rgba(0, 240, 255, 0.05) 51%,
-    transparent 51%
-  );
-  background-size: 100% 4px;
+  display: none;
 }
 
 @keyframes float {
@@ -88,13 +77,13 @@ button {
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 77, 141, 0.5);
+    box-shadow: 0 0 0 0 rgba(232, 163, 61, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 12px rgba(255, 77, 141, 0);
+    box-shadow: 0 0 0 12px rgba(232, 163, 61, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(255, 77, 141, 0);
+    box-shadow: 0 0 0 0 rgba(232, 163, 61, 0);
   }
 }
 

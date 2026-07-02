@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { makeQrDataUrl, uploadUrl } from "@/lib/client";
 import { usePhotos } from "@/lib/usePhotos";
+import { usePreloadPhotos, useLoadedPhoto } from "@/lib/usePhotoReady";
 import { useSettings } from "@/lib/useSettings";
 import type { Photo } from "@/lib/client";
 import { BoltIcon, InstagramIcon, SlideshowIcon } from "@/components/icons";
@@ -45,7 +46,11 @@ export default function TvWall() {
   }, []);
 
   const now = clock + serverOffsetMs;
-  const featured = activePhoto(photos, now);
+  // Preload every image ahead of its turn, and only swap the featured photo in
+  // once fully decoded — the picture appears in a single frame, no progressive
+  // painting, and the idle screen never flashes between queued photos.
+  usePreloadPhotos(photos);
+  const featured = useLoadedPhoto(activePhoto(photos, now));
 
   const live = status === "live";
   const queueLen = photos.filter((p) => !p.displayStartedAt).length;

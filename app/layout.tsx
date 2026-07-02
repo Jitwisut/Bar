@@ -1,18 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Space_Grotesk } from "next/font/google";
+import { IBM_Plex_Sans_Thai } from "next/font/google";
 import { getPublicSettings } from "@/lib/settings";
 import "./globals.css";
 
-const manrope = Manrope({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-manrope",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
+// One clean family that renders Thai + Latin natively (the old Latin-only
+// fonts made Thai copy fall back to the system font mid-sentence).
+const plexThai = IBM_Plex_Sans_Thai({
+  subsets: ["thai", "latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-space-grotesk",
+  variable: "--font-sans",
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -24,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#130d22",
+  themeColor: "#111315",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -36,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="th" className={`${manrope.variable} ${spaceGrotesk.variable}`}>
+    <html lang="th" className={plexThai.variable}>
       <body>{children}</body>
     </html>
   );
